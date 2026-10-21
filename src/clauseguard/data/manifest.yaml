@@ -1,0 +1,60 @@
+# Every file ClauseGuard downloads, pinned by SHA-256. If a check fails, the upstream file has
+# changed: inspect it before updating the hash here.
+
+unfair_tos:
+  description: UNFAIR-ToS sentences from LexGLUE (Hugging Face coastalcph/lex_glue, revision c23fdff)
+  license: CC BY 4.0
+  homepage: https://huggingface.co/datasets/coastalcph/lex_glue
+  files:
+    - url: https://huggingface.co/datasets/coastalcph/lex_glue/resolve/c23fdff1a6bf74e0e1a71cb86f1e781d37da888c/unfair_tos/train-00000-of-00001.parquet
+      filename: train.parquet
+      sha256: 09d6d53aa05a1338d399da97f36cae171ca0a85990402318d134a8c668c86182
+    - url: https://huggingface.co/datasets/coastalcph/lex_glue/resolve/c23fdff1a6bf74e0e1a71cb86f1e781d37da888c/unfair_tos/validation-00000-of-00001.parquet
+      filename: validation.parquet
+      sha256: 6429ccec1085241b05083880fb73548361bc8fd05a6764152f9b8e43e4c177e6
+    - url: https://huggingface.co/datasets/coastalcph/lex_glue/resolve/c23fdff1a6bf74e0e1a71cb86f1e781d37da888c/unfair_tos/test-00000-of-00001.parquet
+      filename: test.parquet
+      sha256: cf3a30be32f5635bc269b12685290a27b144ad837391e776a2070ff0c3a521c4
+
+claudette:
+  description: Original CLAUDETTE corpus (50 ToS). Used only to attach document names to UNFAIR-ToS.
+  license: research use
+  homepage: http://claudette.eui.eu/
+  optional: true
+  files:
+    - url: http://claudette.eui.eu/ToS.zip
+      filename: ToS.zip
+      sha256: 14a7f96b0ac1ec86c4b97ac9db8b3d54c53ee9eae9248993e02881a354ba0bff
+      extract: true
+
+opp115:
+  description: OPP-115 privacy policy corpus (115 policies, 3 annotators each)
+  license: research, teaching and scholarship only (non-commercial)
+  homepage: https://usableprivacy.org/data
+  files:
+    - url: https://usableprivacy.org/static/data/OPP-115_v1_0.zip
+      filename: OPP-115_v1_0.zip
+      sha256: 305ccb1dddaaab5e12f49decf8b132844eb7fd31fce284650d77213e5d3e37e2
+      extract: true
+      skip: [OPP-115/original_policies/, OPP-115/consolidation/, OPP-115/pretty_print, OPP-115/.idea/]
+
+cuad:
+  description: CUAD v1 contracts with expert span annotations (SQuAD format, official train/test split)
+  license: CC BY 4.0
+  homepage: https://github.com/TheAtticusProject/cuad
+  files:
+    - url: https://github.com/TheAtticusProject/cuad/raw/main/data.zip
+      filename: data.zip
+      sha256: f8161d18bea4e9c05e78fa6dda61c19c846fb8087ea969c172753bc2f45b999a
+      extract: true
+
+cuad_pdfs:
+  description: The 510 original CUAD contract PDFs; used only to test PDF extraction on real contracts
+  license: CC BY 4.0
+  homepage: https://zenodo.org/records/4595826
+  optional: true
+  files:
+    - url: https://zenodo.org/records/4595826/files/CUAD_v1.zip?download=1
+      filename: CUAD_v1.zip
+      sha256: 88b694d99007d39777fa44cd72daf8297773d285dc3eab0091ba32078888d18e
+      extract: true
