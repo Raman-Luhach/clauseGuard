@@ -44,7 +44,7 @@ example:  ## analyse the sample documents (one per document type)
 
 check: lint test smoke train-gpu-smoke  ## everything that must pass before the GPU session
 
-# ---- GPU session (Lightning AI); see docs/LIGHTNING.md
+# ---- GPU session (Kaggle or any GPU machine); see docs/TRAINING.md
 train-gpu:  ## every transformer for every module, best selected; resumable
 	uv run clauseguard train-gpu $(MODULES)
 
@@ -65,7 +65,7 @@ benchmark:
 	for m in $(MODULES); do uv run clauseguard benchmark $$m || exit 1; done
 
 package:  ## copy the served models to deploy/models for the Docker image
-	rm -rf deploy/models && uv run clauseguard package-models deploy/models
+	rm -rf deploy/models && uv run clauseguard package-models deploy/models $(foreach m,$(MODULES),--module $(m))
 
 after-gpu: evaluate-final export-onnx robustness benchmark package  ## all post-training steps
 

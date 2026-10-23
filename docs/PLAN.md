@@ -2,7 +2,7 @@
 
 ClauseGuard reads a legal or policy document, flags clauses that could harm the reader, groups them into risk categories with a severity, gives the document a risk score, and explains each flag in plain language.
 
-> **Status (2026-10-23):** Parts 1–4 are coded and checked on the Mac (`make check`). All three modules work end to end with their TF-IDF baselines, in the CLI, the API and the web UI. All 13 configured models pass `--smoke`, and the GPU session itself passes in miniature. Next: the GPU session (section 6, step by step in `docs/LIGHTNING.md`).
+> **Status (2026-10-23):** Parts 1–4 are coded and checked on the Mac (`make check`). All three modules work end to end with their TF-IDF baselines, in the CLI, the API and the web UI. All 13 configured models pass `--smoke`, and the GPU session itself passes in miniature. Next: the GPU session on Kaggle (section 6, step by step in `docs/TRAINING.md`).
 
 It has three separate analyzers:
 
@@ -22,7 +22,7 @@ It has three separate analyzers:
 2. **All modules return the same output format.** Every flag is a `Finding` with the module, unit type, text, character offsets in the document, labels with confidence, risk group, severity and explanation. Because of this, combining modules later only needs a new mapping layer, not a rewrite.
 3. **The core code is shared.** Text extraction, cleaning, segmentation, the training loop, threshold tuning, evaluation, scoring, CLI and API are written once. Modules differ only in their config and data converter.
 4. **Data conversion keeps character offsets.** A `TextWithMap` utility records where each character of the cleaned text came from. This lets us move labels between HTML, raw text and clean text without losing their position.
-5. **Code first, train last.** All four parts are coded and checked on your Mac. Each training command has a `--smoke` mode (tiny model, a few hundred examples, 1 epoch on CPU), and the TF-IDF models train for real on the Mac, so the whole app works end to end before any GPU is used. Once Part 4 is done, a single Lightning AI session trains every transformer model (see section 6). The app uses the best trained model available for each module: TF-IDF until the transformers exist.
+5. **Code first, train last.** All four parts are coded and checked on your Mac. Each training command has a `--smoke` mode (tiny model, a few hundred examples, 1 epoch on CPU), and the TF-IDF models train for real on the Mac, so the whole app works end to end before any GPU is used. Once Part 4 is done, a GPU session on Kaggle trains every transformer model (see section 6). The app uses the best trained model available for each module: TF-IDF until the transformers exist.
 6. **Reproducibility.** Dataset revisions and checksums are pinned, split files are committed, seeds are fixed, and every run is logged.
 
 ---
@@ -286,22 +286,22 @@ OPP-115 categories describe *what a policy does* (collects data, shares data), n
 | Where | What runs there |
 |---|---|
 | **Your Mac (M2, 8 GB)** | Downloads, conversion, data cards, TF-IDF baselines, all `--smoke` runs, inference, ONNX export, API/UI, robustness tests. 8 GB of shared memory isn't enough to fine-tune base-size transformers in reasonable time. |
-| **GPU (Lightning AI)** | Fine-tuning DistilBERT, LEGAL-BERT and PrivBERT for all three modules in one session, after all four parts are coded. |
+| **GPU (Kaggle, free)** | Fine-tuning DistilBERT, LEGAL-BERT and PrivBERT for all three modules in two notebook runs, after all four parts are coded. |
 
-- **Recommended:** 1× **NVIDIA L4 (24 GB)**. An A10G is equally fine. A T4 (16 GB) works at roughly half the speed. An A100 or H100 isn't needed.
-- **Rough training time on an L4:** ToS about 5 min per run, privacy about 10 min per run, contracts about 30–45 min per run (with negative sampling). Allow **about 8–10 GPU hours in total** across all experiments, seeds and reruns.
+- **Used:** Kaggle's free GPU, **2× NVIDIA T4 (16 GB each; the trainer uses one)**, about 30 free GPU hours a week. An L4 or A10G would be about twice as fast; an A100 or H100 isn't needed.
+- **Rough training time on a T4:** ToS about 10 min per run, privacy about 15–20 min, contracts about 15–30 min (short sentences, negative sampling). Allow **about 3–5 GPU hours in total**, split over two runs.
 - **When:** once, after Part 4 is finished and every `--smoke` run passes on your Mac.
 
 ---
 
-## 6. After Part 4: the training session on Lightning AI
+## 6. After Part 4: the training session on a free GPU (Kaggle)
 
-1. Start an L4 Studio, then run `git clone <repo>` and `uv sync --group train`.
-2. `make data`: downloads and prepares all three datasets (a few minutes; same code and checksums as on the Mac).
-3. `make train-gpu`: trains DistilBERT, LEGAL-BERT and PrivBERT (privacy only) for every module, picks the best per module on validation, re-trains the winner with 3 seeds, tunes thresholds, and writes everything to `artifacts/` and `experiments/log.csv`. The script resumes where it left off if the Studio stops.
-4. `make evaluate-final`: runs the test-set evaluation for the chosen models.
-5. Copy `artifacts/` and `experiments/log.csv` back (or push them to the HF Hub), then switch the GPU off.
-6. Back on the Mac: calibrate the risk score, export to ONNX, run the robustness suite and latency benchmarks, write the final report, and deploy to Spaces.
+Lightning AI was the original choice. After its October 2026 security incident revoked all user access, the session moved to Kaggle (free, about 30 GPU hours a week). Step by step: `docs/TRAINING.md`.
+
+1. Import `notebooks/train_on_gpu.ipynb` into Kaggle; GPU T4 x2, internet on, `GITHUB_TOKEN` secret.
+2. Run 1 with `MODULES = "tos privacy"`, run 2 with `MODULES = "contract"` (Save & Run All; each run about 1–3 hours on a T4).
+3. Each run executes `scripts/train_on_gpu.sh`: install, `make data`, quick tests, the session in miniature, `make train-gpu` (compare transformers, re-train the winner with 3 seeds, select), then `make after-gpu` (test results once, ONNX export, robustness, latency, packaging).
+4. Download both `clauseguard-results-*.tgz` files, unpack them in `clauseguard/` on the Mac, and deploy (`docs/DEPLOY.md`).
 
 ---
 
