@@ -1,0 +1,177 @@
+{
+  "module": "contract",
+  "unit_type": "sentence",
+  "n_units": 117613,
+  "train": {
+    "units": 83221,
+    "documents": 367,
+    "no_label": 0.9366986698068998,
+    "multi_label": 367
+  },
+  "validation": {
+    "units": 13974,
+    "documents": 41,
+    "no_label": 0.9498354086160011,
+    "multi_label": 65
+  },
+  "test": {
+    "units": 20418,
+    "documents": 102,
+    "no_label": 0.9334900577921442,
+    "multi_label": 74
+  },
+  "labels": {
+    "contract:uncapped_liability": {
+      "train": 178,
+      "validation": 35,
+      "test": 21
+    },
+    "contract:covenant_not_to_sue": {
+      "train": 115,
+      "validation": 18,
+      "test": 48
+    },
+    "contract:non_compete": {
+      "train": 223,
+      "validation": 23,
+      "test": 70
+    },
+    "contract:exclusivity": {
+      "train": 340,
+      "validation": 46,
+      "test": 89
+    },
+    "contract:minimum_commitment": {
+      "train": 489,
+      "validation": 69,
+      "test": 121
+    },
+    "contract:liquidated_damages": {
+      "train": 124,
+      "validation": 19,
+      "test": 28
+    },
+    "contract:ip_ownership_assignment": {
+      "train": 267,
+      "validation": 33,
+      "test": 71
+    },
+    "contract:cap_on_liability": {
+      "train": 602,
+      "validation": 93,
+      "test": 152
+    },
+    "contract:termination_for_convenience": {
+      "train": 201,
+      "validation": 26,
+      "test": 47
+    },
+    "contract:renewal_term": {
+      "train": 189,
+      "validation": 29,
+      "test": 37
+    },
+    "contract:notice_period_to_terminate_renewal": {
+      "train": 109,
+      "validation": 12,
+      "test": 22
+    },
+    "contract:change_of_control": {
+      "train": 212,
+      "validation": 25,
+      "test": 77
+    },
+    "contract:rofr_rofo_rofn": {
+      "train": 370,
+      "validation": 28,
+      "test": 85
+    },
+    "contract:volume_restriction": {
+      "train": 158,
+      "validation": 21,
+      "test": 36
+    },
+    "contract:no_solicit_of_employees": {
+      "train": 75,
+      "validation": 15,
+      "test": 22
+    },
+    "contract:anti_assignment": {
+      "train": 489,
+      "validation": 76,
+      "test": 147
+    },
+    "contract:audit_rights": {
+      "train": 591,
+      "validation": 97,
+      "test": 117
+    },
+    "contract:insurance": {
+      "train": 577,
+      "validation": 62,
+      "test": 147
+    },
+    "contract:governing_law": {
+      "train": 341,
+      "validation": 39,
+      "test": 95
+    }
+  },
+  "words": {
+    "median": 25.0,
+    "p90": 68.0,
+    "p95": 91.0,
+    "max": 404
+  },
+  "tokens": {
+    "checkpoint": "nlpaueb/legal-bert-base-uncased",
+    "over_max_length": 0.005560609796536097,
+    "max": 1122
+  },
+  "validation_in_train": 564,
+  "test_in_train": 408,
+  "conversion": {
+    "ambiguous_sentences": 76,
+    "contracts": 510,
+    "covered:contract:anti_assignment": 652,
+    "covered:contract:audit_rights": 643,
+    "covered:contract:cap_on_liability": 670,
+    "covered:contract:change_of_control": 252,
+    "covered:contract:covenant_not_to_sue": 173,
+    "covered:contract:exclusivity": 410,
+    "covered:contract:governing_law": 464,
+    "covered:contract:insurance": 559,
+    "covered:contract:ip_ownership_assignment": 318,
+    "covered:contract:liquidated_damages": 121,
+    "covered:contract:minimum_commitment": 420,
+    "covered:contract:no_solicit_of_employees": 91,
+    "covered:contract:non_compete": 258,
+    "covered:contract:notice_period_to_terminate_renewal": 122,
+    "covered:contract:renewal_term": 209,
+    "covered:contract:rofr_rofo_rofn": 367,
+    "covered:contract:termination_for_convenience": 246,
+    "covered:contract:uncapped_liability": 166,
+    "covered:contract:volume_restriction": 170,
+    "sentences": 117613,
+    "spans:contract:anti_assignment": 654,
+    "spans:contract:audit_rights": 643,
+    "spans:contract:cap_on_liability": 672,
+    "spans:contract:change_of_control": 253,
+    "spans:contract:covenant_not_to_sue": 173,
+    "spans:contract:exclusivity": 410,
+    "spans:contract:governing_law": 464,
+    "spans:contract:insurance": 560,
+    "spans:contract:ip_ownership_assignment": 318,
+    "spans:contract:liquidated_damages": 121,
+    "spans:contract:minimum_commitment": 424,
+    "spans:contract:no_solicit_of_employees": 91,
+    "spans:contract:non_compete": 259,
+    "spans:contract:notice_period_to_terminate_renewal": 122,
+    "spans:contract:renewal_term": 210,
+    "spans:contract:rofr_rofo_rofn": 367,
+    "spans:contract:termination_for_convenience": 246,
+    "spans:contract:uncapped_liability": 167,
+    "spans:contract:volume_restriction": 171
+  },
+  "span_coverage": 0.9977865612648221
+}

@@ -1,0 +1,19 @@
+paraphrase:
+  - {text: "This Agreement is governed by the laws of the State of New York, without regard to its conflict of laws principles.", expect: [contract:governing_law]}
+  - {text: "Neither party may transfer this Agreement to a third party without the other party's written approval.", expect: [contract:anti_assignment]}
+  - {text: "During the term and for two years thereafter, Consultant shall not engage in any business that competes with the Company.", expect: [contract:non_compete]}
+  - {text: "Either party may terminate this Agreement at any time, for any reason, upon thirty days' written notice.", expect: [contract:termination_for_convenience]}
+  - {text: "This Agreement shall automatically renew for successive one-year periods unless either party gives notice of non-renewal.", expect: [contract:renewal_term]}
+  - {text: "In no event shall either party's total liability exceed the fees paid in the twelve months preceding the claim.", expect: [contract:cap_on_liability]}
+  - {text: "Licensee shall maintain commercial general liability insurance of at least $1,000,000 per occurrence.", expect: [contract:insurance]}
+  - {text: "Company may audit Distributor's books and records relating to the Products upon reasonable notice.", expect: [contract:audit_rights]}
+  - {text: "Distributor shall be the exclusive distributor of the Products in the Territory.", expect: [contract:exclusivity]}
+  - {text: "All intellectual property created by Contractor in performing the Services shall be the sole property of the Company.", expect: [contract:ip_ownership_assignment]}
+  - {text: "Customer shall purchase a minimum of 10,000 units in each calendar year of the Term.", expect: [contract:minimum_commitment]}
+  - {text: "During the Term, neither party shall solicit or hire any employee of the other party.", expect: [contract:no_solicit_of_employees]}
+negation: []
+neutral:
+  - "The parties have executed this Agreement as of the date first written above."
+  - "Headings are for convenience only and do not affect the interpretation of this Agreement."
+  - "Notices shall be delivered by email to the addresses set out in Schedule A."
+  - "This Agreement may be executed in counterparts, each of which is an original."

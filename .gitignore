@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Data and models (re-created by `make data` and training)
+data/raw/
+data/processed/
+artifacts/
+reports/generated/
+
+# Local
+.DS_Store
+.env
+
+# Packaged models for the Docker image (re-created by `make package`)
+deploy/models/
+logs/

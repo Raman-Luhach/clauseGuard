@@ -1,0 +1,9 @@
+# Only what the serving image needs.
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!src/
+!configs/
+!deploy/models/
+**/__pycache__

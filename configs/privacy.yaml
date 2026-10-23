@@ -1,0 +1,76 @@
+# Privacy Policy module: OPP-115, paragraph (segment) level multi-label classification.
+module: privacy
+display_name: Privacy Policy
+description: The privacy policy or privacy notice of an app, website or online service.
+unit_type: paragraph
+text_style: none
+max_length: 512               # tokens; OPP-115 segments are at most 372 words
+min_unit_words: 5
+paragraph_min_words: 12       # inference-time paragraphs are sized like OPP-115 segments
+paragraph_max_words: 180      # (median 59 words, 95th percentile 164)
+threshold_objective: f1
+selection_metric: macro_f1
+pos_weight: {mode: sqrt, max: 20.0}
+risk_score_k: 8.0             # default only; each run stores its own calibrated value
+seeds: [13, 42, 87]
+
+labels:
+  # The 10 OPP-115 categories (segment gets a category when >= 2 of 3 annotators gave it).
+  - {id: "privacy:first_party_collection", source: First Party Collection/Use}
+  - {id: "privacy:third_party_sharing", source: Third Party Sharing/Collection}
+  - {id: "privacy:user_choice", source: User Choice/Control}
+  - {id: "privacy:user_access", source: "User Access, Edit and Deletion"}
+  - {id: "privacy:data_retention", source: Data Retention}
+  - {id: "privacy:data_security", source: Data Security}
+  - {id: "privacy:policy_change", source: Policy Change}
+  - {id: "privacy:do_not_track", source: Do Not Track}
+  - {id: "privacy:international_audiences", source: International and Specific Audiences}
+  - {id: "privacy:other", source: Other}
+  # Sub-labels built from the annotators' attribute values (same majority rule).
+  - {id: "privacy:sharing_ads_marketing", source: "rule: Third Party Sharing with Purpose Advertising or Marketing"}
+  - {id: "privacy:negated_practice", source: "rule: First/Third Party practice marked Does Not"}
+  - {id: "privacy:change_without_personal_notice", source: "rule: Policy Change without personal notice"}
+
+# Sub-labels move the severity of the category they qualify, one step on info < low < medium < high.
+modifiers:
+  - {label: "privacy:sharing_ads_marketing", applies_to: ["privacy:third_party_sharing"], change: 1}
+  - {label: "privacy:change_without_personal_notice", applies_to: ["privacy:policy_change"], change: 1}
+  - {label: "privacy:negated_practice", applies_to: ["privacy:first_party_collection", "privacy:third_party_sharing"], change: -1}
+
+# A policy should say these things; each one missing is reported and adds 1 to the raw risk.
+expected_statements:
+  - privacy:user_choice
+  - privacy:user_access
+  - privacy:data_security
+  - privacy:data_retention
+
+models:
+  majority: {type: majority}
+  tfidf: {type: tfidf, ngram_max: 2, min_df: 2, c_grid: [1.0, 4.0, 16.0, 64.0, 256.0]}
+  distilbert:
+    type: transformer
+    checkpoint: distilbert/distilbert-base-uncased
+    lr: 5.0e-5
+    epochs: 15
+    batch_size: 16
+    patience: 3
+  legal-bert:
+    type: transformer
+    checkpoint: nlpaueb/legal-bert-base-uncased
+    lr: 3.0e-5
+    epochs: 15
+    batch_size: 16
+    patience: 3
+  privbert:
+    type: transformer
+    checkpoint: mukund/privbert
+    lr: 2.0e-5
+    epochs: 15
+    batch_size: 16
+    patience: 3
+
+smoke: {n_train: 120, n_eval: 60, epochs: 1, max_length: 128, batch_size: 8}
+
+data:
+  split_ratios: {train: 0.70, validation: 0.15, test: 0.15}
+  split_seed: 13

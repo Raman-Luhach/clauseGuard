@@ -1,0 +1,362 @@
+# Maps every module label to a user-facing risk group, a default severity, a definition
+# (also given to the optional LLM explainer) and a template explanation (always available).
+# Severities are judgement calls; change them here, not in code.
+
+severity_weights: {high: 3, medium: 2, low: 1}
+risk_bands: {low: 0, medium: 34, high: 67}   # lower bound of each band on the 0-100 score
+
+risk_groups:
+  rights_account:
+    name: Rights & account
+    description: Your account, your content and the rules you agreed to can be changed or taken away.
+  legal_risk:
+    name: Legal risk
+    description: How and where disputes are handled, and who is responsible when something goes wrong.
+  personal_data:
+    name: Personal data
+    description: What happens to information about you.
+  money_commitments:
+    name: Money & commitments
+    description: Payments, renewals, exclusivity and other obligations you take on.
+  protective:
+    name: Protective
+    description: Rights and safeguards that work in your favour.
+  informational:
+    name: Informational
+    description: Context worth knowing that is not a risk by itself.
+
+labels:
+  # ---------------------------------------------------------------- Terms of Service
+  tos:limitation_of_liability:
+    name: Limitation of liability
+    risk_group: legal_risk
+    severity: high
+    definition: >-
+      The provider limits or excludes its responsibility for losses or damage, for example a cap
+      on compensation or no liability for lost data.
+    template: >-
+      If something goes wrong because of the service, the company says it is not responsible, or
+      that it will pay you only a limited amount.
+  tos:unilateral_termination:
+    name: Unilateral termination
+    risk_group: rights_account
+    severity: high
+    definition: >-
+      The provider can suspend or close the account or end the service at its own discretion,
+      sometimes without a reason or notice.
+    template: >-
+      The company can suspend or close your account on its own decision, possibly without warning
+      or a reason. You could lose access to the service and anything stored in it.
+  tos:unilateral_change:
+    name: Unilateral change
+    risk_group: rights_account
+    severity: medium
+    definition: >-
+      The provider can change the terms or the service on its own; continued use often counts as
+      acceptance.
+    template: >-
+      The company can change these terms or the service whenever it wants. If you keep using it,
+      you are treated as agreeing to the new version.
+  tos:content_removal:
+    name: Content removal
+    risk_group: rights_account
+    severity: medium
+    definition: The provider can remove or modify content the user posts, at its discretion.
+    template: >-
+      The company can delete or change the content you upload or post, on its own decision and
+      possibly without telling you.
+  tos:contract_by_using:
+    name: Contract by using
+    risk_group: rights_account
+    severity: low
+    definition: The user is bound by the terms simply by using the service.
+    template: >-
+      Simply using the service counts as accepting these terms, even if you never clicked
+      "I agree" or read them.
+  tos:choice_of_law:
+    name: Choice of law
+    risk_group: legal_risk
+    severity: low
+    definition: Names the country's or state's law that governs the terms.
+    template: >-
+      The terms are governed by the law of a specific country or state, which may not be where you
+      live and may give you fewer protections.
+  tos:jurisdiction:
+    name: Jurisdiction
+    risk_group: legal_risk
+    severity: medium
+    definition: Disputes must be brought before the courts of a specific place.
+    template: >-
+      Any dispute has to go to the courts of a specific place, which may be far from you and
+      expensive to reach.
+  tos:arbitration:
+    name: Arbitration
+    risk_group: legal_risk
+    severity: high
+    definition: >-
+      Disputes go to private arbitration instead of a court, often together with a waiver of
+      class actions.
+    template: >-
+      Disputes are decided by a private arbitrator instead of a court. You may be giving up the
+      right to sue or to join a class action.
+
+  # ---------------------------------------------------------------- Privacy Policy
+  privacy:first_party_collection:
+    name: Data collection and use
+    risk_group: personal_data
+    severity: low
+    definition: How and why the company itself collects and uses personal information.
+    template: >-
+      The company collects and uses information about you, as described in this paragraph.
+  privacy:third_party_sharing:
+    name: Sharing with third parties
+    risk_group: personal_data
+    severity: medium
+    definition: >-
+      Personal information is shared with, or collected by, other companies (partners,
+      advertisers, analytics providers, affiliates).
+    template: >-
+      Information about you may be shared with, or collected by, other companies, which then
+      handle it under their own rules.
+  privacy:user_choice:
+    name: Your choices (opt-in / opt-out)
+    risk_group: protective
+    severity: protective
+    definition: Choices the user has about collection, use or sharing, such as opting out.
+    template: You have some control here, for example the option to opt in or out.
+    missing_message: >-
+      No clear statement about choices you have, such as opting out of data use or sharing.
+  privacy:user_access:
+    name: Access, correction and deletion
+    risk_group: protective
+    severity: protective
+    definition: The user can access, edit, export or delete their personal information.
+    template: You can see, correct or delete information the company holds about you.
+    missing_message: No clear statement that you can see, correct or delete your data.
+  privacy:data_retention:
+    name: Data retention
+    risk_group: personal_data
+    severity: medium
+    definition: How long personal information is kept.
+    template: >-
+      This explains how long your information is kept. The longer data is kept, the longer it
+      can be misused or exposed in a breach.
+    missing_message: No clear statement about how long your data is kept.
+  privacy:data_security:
+    name: Data security
+    risk_group: protective
+    severity: protective
+    definition: How personal information is protected.
+    template: This describes how the company protects your information.
+    missing_message: No clear statement about how your data is protected.
+  privacy:policy_change:
+    name: Policy changes
+    risk_group: rights_account
+    severity: low
+    definition: Whether and how users are informed when the privacy policy changes.
+    template: The company can change this privacy policy.
+  privacy:do_not_track:
+    name: Do Not Track
+    risk_group: personal_data
+    severity: low
+    definition: How the service responds to the browser's Do Not Track signal.
+    template: >-
+      This covers your browser's "Do Not Track" setting. Many services say they ignore it, so
+      tracking may continue even if you have switched it on.
+  privacy:international_audiences:
+    name: Specific audiences
+    risk_group: informational
+    severity: info
+    definition: Rules for particular groups, such as children or residents of certain regions.
+    template: >-
+      This applies to particular groups of users, such as children or people in certain
+      countries.
+  privacy:other:
+    name: Other
+    risk_group: informational
+    severity: hidden
+    definition: Introductions, contact details and practices not covered by other categories.
+    template: General information.
+  privacy:sharing_ads_marketing:
+    name: Shared for advertising or marketing
+    risk_group: personal_data
+    severity: hidden
+    definition: Third-party sharing whose purpose is advertising or marketing.
+    template: The sharing appears to be for advertising or marketing.
+  privacy:negated_practice:
+    name: States what the company does not do
+    risk_group: informational
+    severity: hidden
+    definition: The paragraph states that a collection or sharing practice does NOT happen.
+    template: >-
+      Part of this paragraph says the company does NOT do this, which may limit the risk. Read
+      it carefully.
+  privacy:change_without_personal_notice:
+    name: Changes without personal notice
+    risk_group: rights_account
+    severity: hidden
+    definition: Policy changes are announced only on the website or not at all.
+    template: >-
+      You may not be told personally about changes; they may only be posted on the website.
+
+  # ---------------------------------------------------------------- Contracts (CUAD)
+  contract:uncapped_liability:
+    name: Uncapped liability
+    risk_group: legal_risk
+    severity: high
+    definition: >-
+      A party's liability has no upper limit, for example for breaches of certain obligations.
+    template: >-
+      There is no upper limit on what a party may have to pay if things go wrong. If that party
+      is you, one claim could cost far more than the contract is worth.
+  contract:covenant_not_to_sue:
+    name: Covenant not to sue
+    risk_group: legal_risk
+    severity: high
+    definition: >-
+      A party agrees not to sue, or not to challenge the other party's rights such as its
+      intellectual property.
+    template: >-
+      A party gives up the right to sue, or to challenge the other side's rights (for example
+      its intellectual property). That can leave you without a remedy later.
+  contract:non_compete:
+    name: Non-compete
+    risk_group: legal_risk
+    severity: high
+    definition: >-
+      A party may not compete, or work in a market, sector or area, during or after the
+      contract.
+    template: >-
+      This limits who you can work with or what business you can do, possibly for some time
+      after the contract ends.
+  contract:exclusivity:
+    name: Exclusivity
+    risk_group: money_commitments
+    severity: high
+    definition: >-
+      A party must deal only with the other party (buy, sell, supply or distribute), or may not
+      deal with others.
+    template: >-
+      You may have to deal only with the other party, for example buying or selling only
+      through them, which limits your options and bargaining power.
+  contract:minimum_commitment:
+    name: Minimum commitment
+    risk_group: money_commitments
+    severity: high
+    definition: A minimum order, purchase, payment or volume a party must meet.
+    template: >-
+      A party commits to buy, pay for or deliver a minimum amount, even if it ends up needing
+      less.
+  contract:liquidated_damages:
+    name: Liquidated damages
+    risk_group: money_commitments
+    severity: high
+    definition: A fixed amount payable on breach or early termination, such as a termination fee.
+    template: >-
+      A fixed sum must be paid if a party breaks the contract or ends it early, whatever the
+      actual loss.
+  contract:ip_ownership_assignment:
+    name: IP ownership assignment
+    risk_group: money_commitments
+    severity: high
+    definition: >-
+      Intellectual property created by one party is owned by, or transferred to, the other
+      party.
+    template: >-
+      Rights in work created under the contract (inventions, designs, code, content) may belong
+      to, or be transferred to, the other party.
+  contract:cap_on_liability:
+    name: Cap on liability
+    risk_group: legal_risk
+    severity: medium
+    definition: >-
+      Liability is capped at an amount, or certain types of damages are excluded.
+    template: >-
+      What a party can recover if things go wrong is capped, or some losses are excluded,
+      which can leave the injured side under-compensated.
+  contract:termination_for_convenience:
+    name: Termination for convenience
+    risk_group: money_commitments
+    severity: medium
+    definition: A party may end the contract without cause, usually with notice.
+    template: >-
+      A party can end the contract without giving a reason, usually after some notice. The
+      work or income you expect could stop early.
+  contract:renewal_term:
+    name: Automatic renewal
+    risk_group: money_commitments
+    severity: medium
+    definition: The contract renews automatically, or the renewal term is set out.
+    template: >-
+      The contract renews for a further period unless someone cancels in time.
+  contract:notice_period_to_terminate_renewal:
+    name: Notice period to stop renewal
+    risk_group: money_commitments
+    severity: medium
+    definition: The deadline for giving notice to stop an automatic renewal.
+    template: >-
+      To stop the contract renewing, notice must be given by a deadline. Miss it and you may
+      be locked in for another term.
+  contract:change_of_control:
+    name: Change of control
+    risk_group: legal_risk
+    severity: medium
+    definition: >-
+      Rights triggered when a party is acquired, merges or changes ownership, such as
+      termination or a consent requirement.
+    template: >-
+      If a party is bought or merges, the other side may gain rights such as ending the
+      contract or requiring its consent.
+  contract:rofr_rofo_rofn:
+    name: Right of first refusal / offer / negotiation
+    risk_group: money_commitments
+    severity: medium
+    definition: A party gets the first right to buy, offer or negotiate before others.
+    template: >-
+      The other party gets the first chance to buy, make an offer or negotiate before anyone
+      else can.
+  contract:volume_restriction:
+    name: Volume restriction
+    risk_group: money_commitments
+    severity: medium
+    definition: >-
+      Fees rise, or consent is needed, when usage or volume passes a threshold.
+    template: >-
+      Going over a set amount (users, units, volume) can trigger extra fees or need permission.
+  contract:no_solicit_of_employees:
+    name: No hiring of staff
+    risk_group: legal_risk
+    severity: medium
+    definition: A party may not hire or solicit the other party's employees or contractors.
+    template: >-
+      A party may not hire or try to recruit the other side's staff, often for a period after
+      the contract ends.
+  contract:anti_assignment:
+    name: No transfer without consent
+    risk_group: legal_risk
+    severity: low
+    definition: Consent is required to assign or transfer the contract to someone else.
+    template: >-
+      The contract can't be transferred to someone else (for example when a business is sold)
+      without the other party's consent.
+  contract:audit_rights:
+    name: Audit rights
+    risk_group: legal_risk
+    severity: low
+    definition: A party may audit the other party's books, records or premises.
+    template: >-
+      A party can inspect the other's books, records or premises to check compliance.
+  contract:insurance:
+    name: Insurance obligation
+    risk_group: money_commitments
+    severity: low
+    definition: A party must hold insurance of certain types or amounts.
+    template: A party must buy and keep certain insurance, which is an extra cost.
+  contract:governing_law:
+    name: Governing law
+    risk_group: legal_risk
+    severity: low
+    definition: Names the state's or country's law that governs the contract.
+    template: >-
+      The contract is governed by the law of a specific state or country, which may be
+      unfamiliar to you.

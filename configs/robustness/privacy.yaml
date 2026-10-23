@@ -1,0 +1,20 @@
+paraphrase:
+  - {text: "We pass information about your activity to advertising networks so they can show you ads that match your interests.", expect: [privacy:third_party_sharing, privacy:sharing_ads_marketing]}
+  - {text: "Analytics providers and other business partners may receive your device identifiers and usage data.", expect: [privacy:third_party_sharing]}
+  - {text: "You can ask us at any time to delete your account and all personal data associated with it.", expect: [privacy:user_access]}
+  - {text: "You have the right to see, correct or erase the personal information we hold about you.", expect: [privacy:user_access]}
+  - {text: "You may opt out of receiving marketing emails by using the unsubscribe link in any message.", expect: [privacy:user_choice]}
+  - {text: "We protect your information with encryption in transit and at rest, and we restrict access to authorised staff.", expect: [privacy:data_security]}
+  - {text: "We retain your personal information for as long as your account is active and delete it within 90 days after closure.", expect: [privacy:data_retention]}
+  - {text: "We may revise this policy from time to time and will post the updated version on this page.", expect: [privacy:policy_change]}
+  - {text: "When you create an account we collect your name, email address, phone number and approximate location.", expect: [privacy:first_party_collection]}
+  - {text: "Our service is not intended for children under 13 and we do not knowingly collect information from them.", expect: [privacy:international_audiences]}
+  - {text: "Our website does not respond to Do Not Track signals sent by your browser.", expect: [privacy:do_not_track]}
+negation:
+  - {text: "We do not sell, rent or trade your personal information to third parties for their marketing purposes.", expect: [privacy:negated_practice]}
+  - {text: "We never share your contact details with advertisers or data brokers.", expect: [privacy:negated_practice]}
+  - {text: "We do not collect any precise location data from your device.", expect: [privacy:negated_practice]}
+neutral:
+  - "Thank you for reading this notice. If you have questions, write to our support team."
+  - "This page was last reviewed by our editorial team in spring."
+  - "Our company was founded in a small garage and now has offices in three cities."

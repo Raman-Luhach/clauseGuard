@@ -1,0 +1,44 @@
+# Terms of Service module: UNFAIR-ToS (LexGLUE), sentence-level multi-label classification.
+module: tos
+display_name: Terms of Service
+description: Terms of service or terms of use of an app, website or online service.
+unit_type: sentence
+text_style: unfair_tos        # lowercase + Penn-Treebank spacing, like the training text
+max_length: 128               # tokens; checked against the data card
+min_unit_words: 3             # shorter units (headings, markers) are not classified
+threshold_objective: f1
+selection_metric: macro_f1    # validation metric used to pick the best run
+pos_weight: {mode: sqrt, max: 20.0}
+risk_score_k: 8.0             # default only; each run stores its own calibrated value
+seeds: [13, 42, 87]
+
+# Order matches the ClassLabel order stored in the LexGLUE parquet metadata.
+labels:
+  - {id: "tos:limitation_of_liability", source: Limitation of liability}
+  - {id: "tos:unilateral_termination", source: Unilateral termination}
+  - {id: "tos:unilateral_change", source: Unilateral change}
+  - {id: "tos:content_removal", source: Content removal}
+  - {id: "tos:contract_by_using", source: Contract by using}
+  - {id: "tos:choice_of_law", source: Choice of law}
+  - {id: "tos:jurisdiction", source: Jurisdiction}
+  - {id: "tos:arbitration", source: Arbitration}
+
+models:
+  majority: {type: majority}
+  tfidf: {type: tfidf, ngram_max: 2, min_df: 2, c_grid: [1.0, 4.0, 16.0, 64.0, 256.0, 1024.0]}
+  distilbert:
+    type: transformer
+    checkpoint: distilbert/distilbert-base-uncased
+    lr: 5.0e-5
+    epochs: 20
+    batch_size: 16
+    patience: 3
+  legal-bert:
+    type: transformer
+    checkpoint: nlpaueb/legal-bert-base-uncased
+    lr: 3.0e-5
+    epochs: 20
+    batch_size: 16
+    patience: 3
+
+smoke: {n_train: 200, n_eval: 100, epochs: 1, max_length: 64, batch_size: 8}

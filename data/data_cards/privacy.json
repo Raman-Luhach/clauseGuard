@@ -1,0 +1,138 @@
+{
+  "module": "privacy",
+  "unit_type": "paragraph",
+  "n_units": 3792,
+  "train": {
+    "units": 2634,
+    "documents": 80,
+    "no_label": 0.015565679574791193,
+    "multi_label": 673
+  },
+  "validation": {
+    "units": 652,
+    "documents": 17,
+    "no_label": 0.01687116564417178,
+    "multi_label": 183
+  },
+  "test": {
+    "units": 506,
+    "documents": 18,
+    "no_label": 0.015810276679841896,
+    "multi_label": 121
+  },
+  "labels": {
+    "privacy:first_party_collection": {
+      "train": 878,
+      "validation": 196,
+      "test": 135
+    },
+    "privacy:third_party_sharing": {
+      "train": 644,
+      "validation": 167,
+      "test": 134
+    },
+    "privacy:user_choice": {
+      "train": 246,
+      "validation": 65,
+      "test": 47
+    },
+    "privacy:user_access": {
+      "train": 104,
+      "validation": 25,
+      "test": 20
+    },
+    "privacy:data_retention": {
+      "train": 45,
+      "validation": 26,
+      "test": 7
+    },
+    "privacy:data_security": {
+      "train": 131,
+      "validation": 41,
+      "test": 38
+    },
+    "privacy:policy_change": {
+      "train": 81,
+      "validation": 21,
+      "test": 17
+    },
+    "privacy:do_not_track": {
+      "train": 22,
+      "validation": 4,
+      "test": 5
+    },
+    "privacy:international_audiences": {
+      "train": 189,
+      "validation": 65,
+      "test": 47
+    },
+    "privacy:other": {
+      "train": 774,
+      "validation": 156,
+      "test": 128
+    },
+    "privacy:sharing_ads_marketing": {
+      "train": 176,
+      "validation": 51,
+      "test": 38
+    },
+    "privacy:negated_practice": {
+      "train": 110,
+      "validation": 27,
+      "test": 23
+    },
+    "privacy:change_without_personal_notice": {
+      "train": 75,
+      "validation": 19,
+      "test": 14
+    }
+  },
+  "words": {
+    "median": 59.5,
+    "p90": 133.0,
+    "p95": 163.44999999999982,
+    "max": 372
+  },
+  "tokens": {
+    "checkpoint": "mukund/privbert",
+    "over_max_length": 0.0,
+    "max": 431
+  },
+  "validation_in_train": 7,
+  "test_in_train": 14,
+  "conversion": {
+    "annotators_per_policy_3": 115,
+    "any:privacy:change_without_personal_notice": 177,
+    "any:privacy:data_retention": 156,
+    "any:privacy:data_security": 375,
+    "any:privacy:do_not_track": 32,
+    "any:privacy:first_party_collection": 1522,
+    "any:privacy:international_audiences": 353,
+    "any:privacy:negated_practice": 292,
+    "any:privacy:other": 1763,
+    "any:privacy:policy_change": 192,
+    "any:privacy:sharing_ads_marketing": 404,
+    "any:privacy:third_party_sharing": 1186,
+    "any:privacy:user_access": 231,
+    "any:privacy:user_choice": 632,
+    "majority:privacy:change_without_personal_notice": 108,
+    "majority:privacy:data_retention": 78,
+    "majority:privacy:data_security": 210,
+    "majority:privacy:do_not_track": 31,
+    "majority:privacy:first_party_collection": 1209,
+    "majority:privacy:international_audiences": 301,
+    "majority:privacy:negated_practice": 160,
+    "majority:privacy:other": 1058,
+    "majority:privacy:policy_change": 119,
+    "majority:privacy:sharing_ads_marketing": 265,
+    "majority:privacy:third_party_sharing": 945,
+    "majority:privacy:user_access": 149,
+    "majority:privacy:user_choice": 358,
+    "policies": 115,
+    "practices": 23194,
+    "spans_absent": 69020,
+    "spans_exact": 75401,
+    "spans_found_by_search": 2505
+  },
+  "sentences": 11105
+}

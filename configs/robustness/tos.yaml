@@ -1,0 +1,22 @@
+# Hand-written robustness cases. `expect`: labels that must be predicted; neutral texts must not
+# trigger any risky label. Paraphrases deliberately avoid the most common training wording.
+paraphrase:
+  - {text: "We reserve the right to shut down your profile whenever we see fit, with no warning.", expect: [tos:unilateral_termination]}
+  - {text: "Your access to the platform may be revoked at our discretion and without prior notification.", expect: [tos:unilateral_termination]}
+  - {text: "This agreement may be amended by us from time to time, and continuing to use the app means you accept the amended version.", expect: [tos:unilateral_change]}
+  - {text: "We can update these terms at any moment and the new version applies as soon as it is posted.", expect: [tos:unilateral_change]}
+  - {text: "We are not responsible for any loss of data, profits or business that results from your use of the app.", expect: [tos:limitation_of_liability]}
+  - {text: "In no event shall our total liability to you exceed one hundred dollars.", expect: [tos:limitation_of_liability]}
+  - {text: "Any claim between you and us will be settled by final and binding arbitration instead of in court.", expect: [tos:arbitration]}
+  - {text: "You give up your right to take part in a class action against the company.", expect: [tos:arbitration]}
+  - {text: "These terms shall be interpreted in accordance with the laws of Ireland.", expect: [tos:choice_of_law]}
+  - {text: "You agree that the courts of London have exclusive jurisdiction over any dispute arising from these terms.", expect: [tos:jurisdiction]}
+  - {text: "We may delete any material you upload if we believe it breaks these rules.", expect: [tos:content_removal]}
+  - {text: "By accessing or browsing the site you accept these terms in full.", expect: [tos:contract_by_using]}
+negation: []
+neutral:
+  - "Thank you for choosing our photo sharing app."
+  - "These terms explain how you can share pictures with your friends and family."
+  - "If you have questions about your order, please email our support team."
+  - "You can change your profile picture at any time from the settings page."
+  - "Our offices are closed on public holidays."

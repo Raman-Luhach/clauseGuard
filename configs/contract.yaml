@@ -1,0 +1,64 @@
+# Contract module: CUAD v1, expert span annotations converted to sentence-level labels.
+module: contract
+display_name: Contract
+description: A business agreement, such as a service, supply, licence, distribution or freelance contract.
+unit_type: sentence
+text_style: none
+max_length: 256               # tokens; checked against the data card
+min_unit_words: 3
+threshold_objective: f1
+selection_metric: macro_f1
+pos_weight: {mode: sqrt, max: 20.0}
+risk_score_k: 8.0             # default only; each run stores its own calibrated value
+seeds: [13, 42, 87]
+merge_adjacent: true          # CUAD clauses often span consecutive sentences
+
+# Risk-relevant CUAD categories found in at least 50 of the 510 contracts. Left out: metadata
+# (document name, parties, dates), descriptive licence types, and rarer categories.
+labels:
+  - {id: "contract:uncapped_liability", source: Uncapped Liability}
+  - {id: "contract:covenant_not_to_sue", source: Covenant Not To Sue}
+  - {id: "contract:non_compete", source: Non-Compete}
+  - {id: "contract:exclusivity", source: Exclusivity}
+  - {id: "contract:minimum_commitment", source: Minimum Commitment}
+  - {id: "contract:liquidated_damages", source: Liquidated Damages}
+  - {id: "contract:ip_ownership_assignment", source: Ip Ownership Assignment}
+  - {id: "contract:cap_on_liability", source: Cap On Liability}
+  - {id: "contract:termination_for_convenience", source: Termination For Convenience}
+  - {id: "contract:renewal_term", source: Renewal Term}
+  - {id: "contract:notice_period_to_terminate_renewal", source: Notice Period To Terminate Renewal}
+  - {id: "contract:change_of_control", source: Change Of Control}
+  - {id: "contract:rofr_rofo_rofn", source: Rofr/Rofo/Rofn}
+  - {id: "contract:volume_restriction", source: Volume Restriction}
+  - {id: "contract:no_solicit_of_employees", source: No-Solicit Of Employees}
+  - {id: "contract:anti_assignment", source: Anti-Assignment}
+  - {id: "contract:audit_rights", source: Audit Rights}
+  - {id: "contract:insurance", source: Insurance}
+  - {id: "contract:governing_law", source: Governing Law}
+
+models:
+  majority: {type: majority}
+  tfidf: {type: tfidf, ngram_max: 2, min_df: 2, c_grid: [1.0, 4.0, 16.0, 64.0]}
+  distilbert:
+    type: transformer
+    checkpoint: distilbert/distilbert-base-uncased
+    lr: 5.0e-5
+    epochs: 6
+    batch_size: 32
+    patience: 2
+    negative_ratio: 4.0       # all labelled sentences + 4 unlabelled per labelled one
+  legal-bert:
+    type: transformer
+    checkpoint: nlpaueb/legal-bert-base-uncased
+    lr: 3.0e-5
+    epochs: 6
+    batch_size: 32
+    patience: 2
+    negative_ratio: 4.0
+
+smoke: {n_train: 200, n_eval: 100, epochs: 1, max_length: 64, batch_size: 8}
+
+data:
+  validation_ratio: 0.10      # carved from CUAD's official 408 training contracts, by contract
+  split_seed: 13
+  overlap_threshold: 0.5      # sentence is positive when overlap >= 0.5 * min(sentence, span)

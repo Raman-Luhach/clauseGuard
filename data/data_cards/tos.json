@@ -1,0 +1,125 @@
+{
+  "module": "tos",
+  "unit_type": "sentence",
+  "n_units": 9414,
+  "train": {
+    "units": 5532,
+    "documents": 30,
+    "no_label": 0.886117136659436,
+    "multi_label": 63
+  },
+  "validation": {
+    "units": 2275,
+    "documents": 10,
+    "no_label": 0.8989010989010989,
+    "multi_label": 18
+  },
+  "test": {
+    "units": 1607,
+    "documents": 10,
+    "no_label": 0.8929682638456752,
+    "multi_label": 14
+  },
+  "labels": {
+    "tos:limitation_of_liability": {
+      "train": 191,
+      "validation": 67,
+      "test": 38
+    },
+    "tos:unilateral_termination": {
+      "train": 139,
+      "validation": 59,
+      "test": 38
+    },
+    "tos:unilateral_change": {
+      "train": 122,
+      "validation": 28,
+      "test": 38
+    },
+    "tos:content_removal": {
+      "train": 73,
+      "validation": 32,
+      "test": 13
+    },
+    "tos:contract_by_using": {
+      "train": 76,
+      "validation": 18,
+      "test": 23
+    },
+    "tos:choice_of_law": {
+      "train": 39,
+      "validation": 18,
+      "test": 13
+    },
+    "tos:jurisdiction": {
+      "train": 34,
+      "validation": 18,
+      "test": 16
+    },
+    "tos:arbitration": {
+      "train": 28,
+      "validation": 9,
+      "test": 7
+    }
+  },
+  "words": {
+    "median": 27.0,
+    "p90": 60.0,
+    "p95": 76.0,
+    "max": 441
+  },
+  "tokens": {
+    "checkpoint": "nlpaueb/legal-bert-base-uncased",
+    "over_max_length": 0.01359677076694285,
+    "max": 478
+  },
+  "validation_in_train": 18,
+  "test_in_train": 33,
+  "claudette_aligned": 9414,
+  "claudette_label_agreement": {
+    "tos:limitation_of_liability": 1.0,
+    "tos:unilateral_termination": 1.0,
+    "tos:unilateral_change": 1.0,
+    "tos:content_removal": 1.0,
+    "tos:contract_by_using": 1.0,
+    "tos:choice_of_law": 1.0,
+    "tos:jurisdiction": 1.0,
+    "tos:arbitration": 1.0
+  },
+  "claudette_fairness_levels": {
+    "LTD": {
+      "1": 25,
+      "2": 254,
+      "3": 11
+    },
+    "TER": {
+      "2": 128,
+      "3": 96
+    },
+    "CH": {
+      "2": 176,
+      "3": 5
+    },
+    "CR": {
+      "2": 66,
+      "3": 41
+    },
+    "USE": {
+      "2": 116
+    },
+    "LAW": {
+      "1": 6,
+      "2": 67
+    },
+    "J": {
+      "1": 8,
+      "2": 1,
+      "3": 66
+    },
+    "A": {
+      "2": 41,
+      "3": 1,
+      "4": 8
+    }
+  }
+}
