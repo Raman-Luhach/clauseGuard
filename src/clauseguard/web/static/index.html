@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClauseGuard</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <h1 class="brand">ClauseGuard</h1>
+      <p class="tagline">Find the clauses that could work against you before you sign or click “I agree”.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card" aria-labelledby="step-type-title">
+      <h2 id="step-type-title"><span class="step">1</span> What kind of document is this?</h2>
+      <div id="types" class="types" role="radiogroup" aria-labelledby="step-type-title">
+        <p class="muted">Loading…</p>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="step-input-title">
+      <h2 id="step-input-title"><span class="step">2</span> Add the document</h2>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" id="tab-file" aria-selected="true" aria-controls="pane-file">Upload a file</button>
+        <button type="button" role="tab" id="tab-text" aria-selected="false" aria-controls="pane-text">Paste text</button>
+      </div>
+      <div id="pane-file" role="tabpanel">
+        <label id="drop" class="drop" for="file">
+          <input type="file" id="file" accept=".pdf,.txt,application/pdf,text/plain">
+          <span id="drop-label">Drop a PDF or text file here, or <u>choose a file</u></span>
+        </label>
+      </div>
+      <div id="pane-text" role="tabpanel" hidden>
+        <textarea id="text" rows="10" placeholder="Paste the full document here…"></textarea>
+      </div>
+      <div class="actions">
+        <button type="button" id="analyze" class="primary" disabled>Analyse</button>
+        <span id="status" role="status" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <section id="results" hidden aria-labelledby="results-title">
+      <div class="card summary">
+        <div class="score" id="score"></div>
+        <div class="summary-text">
+          <h2 id="results-title">Results</h2>
+          <p id="summary-line" class="muted"></p>
+          <ul id="warnings" class="warnings"></ul>
+        </div>
+      </div>
+      <div class="card" id="protections" hidden>
+        <h3>Protections in this policy</h3>
+        <ul id="protections-list" class="protections"></ul>
+      </div>
+      <div class="filters" id="filters" role="group" aria-label="Filter by severity"></div>
+      <div class="columns">
+        <article class="card document" aria-label="Your document">
+          <h3>Your document</h3>
+          <div id="document" class="doc-text"></div>
+        </article>
+        <aside class="card findings" aria-label="Flagged clauses">
+          <h3>Flagged clauses</h3>
+          <ol id="findings" class="finding-list"></ol>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap disclaimer">
+    ClauseGuard highlights clauses that may work against you. It is not legal advice; check
+    important decisions with a qualified professional. Documents are analysed in memory and not stored.
+  </footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>
