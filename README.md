@@ -12,7 +12,7 @@ The user always picks the document type first. Each type has its own analyzer, t
 
 Every module works end to end on the CPU with its TF-IDF baseline. The transformer models
 (DistilBERT, LEGAL-BERT, PrivBERT) pass `--smoke` and are trained in one GPU session
-([docs/LIGHTNING.md](docs/LIGHTNING.md)); the app then serves them through ONNX Runtime.
+on a free Kaggle GPU ([docs/TRAINING.md](docs/TRAINING.md)); the app then serves them through ONNX Runtime.
 
 See [docs/PLAN.md](docs/PLAN.md) for the full plan.
 
@@ -66,7 +66,8 @@ make after-gpu   # test results, ONNX export (INT8 if it costs <= 0.01 macro-F1)
                  # robustness, latency benchmark, packaged models in deploy/models
 ```
 
-See [docs/LIGHTNING.md](docs/LIGHTNING.md) for the session itself and
+See [docs/TRAINING.md](docs/TRAINING.md) for the session itself (a ready-made Kaggle notebook,
+`notebooks/train_on_gpu.ipynb`, runs `scripts/train_on_gpu.sh`) and
 [docs/DEPLOY.md](docs/DEPLOY.md) for Docker and Hugging Face Spaces. The serving image has no
 PyTorch: transformers run through ONNX Runtime.
 
@@ -124,7 +125,9 @@ src/clauseguard/
   monitoring.py     metadata-only request log, drift summary
   cli.py
 configs/robustness/ hand-written paraphrase, negation and neutral cases per module
-docs/               LIGHTNING.md (training session), DEPLOY.md (Docker, Hugging Face Spaces)
+docs/               TRAINING.md (GPU session on Kaggle), DEPLOY.md (Docker, Hugging Face Spaces)
+notebooks/          train_on_gpu.ipynb (the Kaggle/Colab notebook)
+scripts/            train_on_gpu.sh (the whole GPU job on any Linux GPU machine)
 data/splits/        document-level split assignments (committed, reused on every rebuild)
 data/data_cards/    generated data cards + samples for the manual conversion check (committed)
 experiments/log.csv one row per training run (committed)

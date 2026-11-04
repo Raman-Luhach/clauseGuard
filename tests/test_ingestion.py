@@ -175,3 +175,20 @@ def test_resolve_targets_expands_groups():
     assert dl.resolve_targets(["all", "cuad"]) == ["unfair_tos", "claudette", "opp115", "cuad"]
     with pytest.raises(ValueError, match="unknown dataset"):
         dl.resolve_targets(["nope"])
+
+
+def test_failing_optional_dataset_does_not_stop_the_download(home, tmp_path, monkeypatch):
+    from typer.testing import CliRunner
+
+    from clauseguard.cli import app
+
+    manifest = _serve(tmp_path, monkeypatch, "data.txt", b"hello")
+    manifest["extra"] = {
+        **manifest["demo"],
+        "optional": True,
+        "files": [{**manifest["demo"]["files"][0], "sha256": "0" * 64}],
+    }
+    result = CliRunner().invoke(app, ["data", "download", "demo", "extra"])
+    assert result.exit_code == 0, result.output
+    assert "skipped optional dataset" in result.output
+    assert (home / "data" / "raw" / "demo" / "data.txt").exists()

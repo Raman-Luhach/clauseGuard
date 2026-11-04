@@ -64,7 +64,14 @@ def data_download(
         console.print(
             f"[bold]{name}[/]: {manifest[name]['description']} ({manifest[name]['license']})"
         )
-        path = download(name, force=force)
+        try:
+            path = download(name, force=force)
+        except RuntimeError as exc:
+            if not manifest[name].get("optional"):
+                raise
+            # Optional extras (e.g. CLAUDETTE's document names) must not stop a long run.
+            console.print(f"  [yellow]skipped optional dataset:[/] {exc}")
+            continue
         console.print(f"  ok -> {path}")
 
 
@@ -301,7 +308,8 @@ def export_onnx_cmd(
     cfg = load_module_config(module)
     path = resolve_run(module, run, cfg.selection_metric)
     if read_json(path / "meta.json")["model_type"] != "transformer":
-        raise ValueError(f"{path.name} is not a transformer run; only transformers are exported")
+        console.print(f"{module}: serves {path.name}, not a transformer; nothing to export")
+        return
     export_onnx(path, quantize=quantize, log=console.print)
     if compare:
         units = load_units(module)
