@@ -65,7 +65,80 @@ if (typeof document !== "undefined") {
 
   function updateButton() {
     const hasInput = state.mode === "file" ? Boolean(state.file) : $("text").value.trim().length > 0;
-    $("analyze").disabled = !(state.type && hasInput);
+    $("analyze").disabled = !(state.type && hasInput) || state.busy;
+    $("example").disabled = !state.type || state.busy;
+  }
+
+  async function loadExample() {
+    try {
+      const response = await fetch(`/examples/${state.type}`);
+      if (!response.ok) throw new Error();
+      selectTab("text");
+      $("text").value = await response.text();
+      setStatus("Example loaded. Press Analyse.");
+      updateButton();
+    } catch (err) {
+      setStatus("Could not load the example.", true);
+    }
+  }
+
+  /* ---- workflow panel: shows each stage while the server works, then real numbers ---- */
+  const STAGES = [
+    ["read", "Read document"],
+    ["clean", "Extract & clean text"],
+    ["split", "Split into units"],
+    ["classify", "Classify"],
+    ["score", "Score risk"],
+    ["explain", "Explain flags"],
+  ];
+  let pipelineTimer = null;
+
+  function setStage(id, status, detail) {
+    const node = $(`stage-${id}`);
+    node.className = `stage ${status}`;
+    if (detail !== undefined) node.querySelector(".detail").textContent = detail;
+  }
+
+  function startPipeline() {
+    $("workflow").hidden = false;
+    $("pipeline").replaceChildren(...STAGES.map(([id, name]) => {
+      const item = el("li", "stage");
+      item.id = `stage-${id}`;
+      const title = el("div", "name");
+      title.append(el("span", "dot"), id === "classify" && state.model ? `Classify (${state.model})` : name);
+      item.append(title, el("div", "detail", "waiting"));
+      return item;
+    }));
+    let i = 0;
+    setStage(STAGES[0][0], "active", "working…");
+    clearInterval(pipelineTimer);
+    pipelineTimer = setInterval(() => {  // the server reports timings only at the end
+      if (i >= 3) return;  // stay on "Classify" (the slow step) until the answer arrives
+      setStage(STAGES[i][0], "done", "done");
+      i += 1;
+      setStage(STAGES[i][0], "active", "working…");
+    }, 900);
+    $("workflow").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function finishPipeline(r) {
+    clearInterval(pipelineTimer);
+    const t = r.timings_ms, d = r.diagnostics || {};
+    const unit = r.findings[0] ? r.findings[0].unit_type : "unit";
+    const s = (ms) => `${(ms / 1000).toFixed(1)} s`;
+    setStage("read", "done", r.n_pages ? `PDF, ${r.n_pages} pages` : "text");
+    setStage("clean", "done", `${r.n_words.toLocaleString("en")} words`);
+    setStage("split", "done", `${r.n_units} ${unit}s · ${s(t.segmentation)}`);
+    setStage("classify", "done", `${d.classified_units ?? r.n_units} checked · ${r.model.model} · ${s(t.classification)}`);
+    setStage("score", "done", `${Math.round(r.risk_score)}/100 · ${r.findings.length} flagged`);
+    const llm = r.findings.some((f) => f.explanation_source === "llm");
+    setStage("explain", "done", `${llm ? "Claude" : "templates"} · total ${s(t.total)}`);
+  }
+
+  function failPipeline(message) {
+    clearInterval(pipelineTimer);
+    const active = document.querySelector(".stage.active") || $(`stage-${STAGES[0][0]}`);
+    if (active) { active.className = "stage failed"; active.querySelector(".detail").textContent = message; }
   }
 
   function setStatus(message, isError = false) {
@@ -82,9 +155,10 @@ if (typeof document !== "undefined") {
         const label = el("label", "type" + (t.ready ? "" : " disabled"));
         const input = el("input");
         Object.assign(input, { type: "radio", name: "doctype", value: t.id, disabled: !t.ready });
-        input.addEventListener("change", () => { state.type = t.id; updateButton(); });
+        input.addEventListener("change", () => { state.type = t.id; state.model = t.model; updateButton(); });
         label.append(input, el("strong", null, t.name),
           el("small", null, t.ready ? t.description : "Not available yet: no trained model."));
+        if (t.ready && t.model) label.append(el("span", "model", `Model: ${t.model}`));
         box.append(label);
       }
     } catch (err) {
@@ -113,22 +187,30 @@ if (typeof document !== "undefined") {
     form.append("document_type", state.type);
     if (state.mode === "file") form.append("file", state.file);
     else form.append("text", $("text").value);
-    $("analyze").disabled = true;
-    setStatus("Analysing…");
+    state.busy = true;
+    updateButton();
+    $("results").hidden = true;
+    setStatus("Analysing… this takes a few seconds on a CPU.");
+    startPipeline();
     try {
       const response = await fetch("/analyze", { method: "POST", body: form });
       const body = await response.json();
       if (!response.ok) {
-        setStatus(body.error ? body.error.message : "Something went wrong.", true);
+        const message = body.error ? body.error.message : "Something went wrong.";
+        failPipeline(message);
+        setStatus(message, true);
         return;
       }
       state.result = body;
       state.hidden.clear();
+      finishPipeline(body);
       setStatus(`Done in ${(body.timings_ms.total / 1000).toFixed(1)} s.`);
       render();
     } catch (err) {
+      failPipeline("server not reachable");
       setStatus("Could not reach the server.", true);
     } finally {
+      state.busy = false;
       updateButton();
     }
   }
@@ -249,6 +331,14 @@ if (typeof document !== "undefined") {
     const r = state.result;
     $("results").hidden = false;
     $("summary-line").textContent = summaryLine(r);
+    const groups = {};
+    for (const f of r.findings) {
+      if (["high", "medium", "low"].includes(f.severity)) groups[f.risk_group_name] = (groups[f.risk_group_name] || 0) + 1;
+    }
+    const groupBox = el("div", "groups");
+    groupBox.append(...Object.entries(groups).map(([g, n]) => el("span", null, `${g}: ${n}`)));
+    $("summary-line").after(groupBox);
+    document.querySelectorAll(".summary-text .groups").forEach((node) => { if (node !== groupBox) node.remove(); });
     $("warnings").replaceChildren(...r.warnings.map((w) => el("li", null, w)));
     renderScore(r);
     renderProtections(r);
@@ -265,6 +355,7 @@ if (typeof document !== "undefined") {
     $("file").addEventListener("change", (e) => chooseFile(e.target.files[0]));
     $("text").addEventListener("input", updateButton);
     $("analyze").addEventListener("click", analyze);
+    $("example").addEventListener("click", loadExample);
     const drop = $("drop");
     drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
     drop.addEventListener("dragleave", () => drop.classList.remove("over"));

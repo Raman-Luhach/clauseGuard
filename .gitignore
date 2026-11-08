@@ -19,3 +19,6 @@ reports/generated/
 # Packaged models for the Docker image (re-created by `make package`)
 deploy/models/
 logs/
+
+# Kaggle result archives
+*.tgz

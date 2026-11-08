@@ -7,3 +7,4 @@
 !configs/
 !deploy/models/
 **/__pycache__
+!examples/

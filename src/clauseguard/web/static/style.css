@@ -181,3 +181,26 @@ mark.active, .finding.active { outline: 2px solid var(--accent); }
 
 .disclaimer { color: var(--muted); font-size: 0.85rem; padding-bottom: 32px; }
 [hidden] { display: none !important; }
+
+/* ---- workflow panel ---- */
+.secondary {
+  background: transparent; color: var(--accent); border: 1px solid var(--accent);
+  border-radius: var(--radius); padding: 9px 18px; font: inherit; cursor: pointer;
+}
+.secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+.type .model { display: inline-block; margin-top: 6px; font-size: 0.75rem; font-weight: 600;
+  color: var(--accent); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
+.pipeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.stage { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+.stage .name { font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.stage .detail { color: var(--muted); font-size: 0.85rem; margin-top: 4px; min-height: 1.2em; }
+.stage .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--border); flex: none; }
+.stage.active { border-color: var(--accent); }
+.stage.active .dot { border-color: var(--accent); border-top-color: transparent; animation: spin 0.8s linear infinite; }
+.stage.done .dot { background: var(--protective); border-color: var(--protective); }
+.stage.failed { border-color: var(--high); }
+.stage.failed .dot { background: var(--high); border-color: var(--high); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.groups { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.groups span { font-size: 0.8rem; border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px; }

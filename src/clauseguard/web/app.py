@@ -15,19 +15,30 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import FastAPI, File, Form, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from clauseguard import __version__, pipeline
 from clauseguard.config import available_modules, load_module_config
 from clauseguard.errors import InputError, ModelNotAvailableError
+from clauseguard.evaluation.robustness import EXAMPLES
 from clauseguard.ingestion.loader import MAX_PDF_BYTES
-from clauseguard.models.runs import resolve_run
+from clauseguard.models.runs import read_json, resolve_run
 from clauseguard.monitoring import log_analysis, log_error, log_feedback
+from clauseguard.paths import _CODE_ROOT
 from clauseguard.schema import AnalysisResult
 
 STATIC = Path(__file__).with_name("static")
+EXAMPLES_DIR = _CODE_ROOT / "examples"
+PUBLIC_FIELDS = ("name", "description", "ready", "model", "unit")
+MODEL_NAMES = {
+    "legal-bert": "LEGAL-BERT",
+    "privbert": "PrivBERT",
+    "distilbert": "DistilBERT",
+    "tfidf": "TF-IDF baseline",
+    "majority": "majority baseline",
+}
 
 
 class Feedback(BaseModel):
@@ -47,11 +58,14 @@ def _module_status() -> dict[str, dict]:
         cfg = load_module_config(module)
         try:
             run = resolve_run(module, None, cfg.selection_metric)
+            meta = read_json(run / "meta.json")
             status[module] = {
                 "name": cfg.display_name,
                 "description": cfg.description,
                 "ready": True,
                 "run": run.name,
+                "model": MODEL_NAMES.get(meta["model"], meta["model"]),
+                "unit": cfg.unit_type,
             }
         except ModelNotAvailableError as exc:
             status[module] = {
@@ -88,7 +102,14 @@ def create_app() -> FastAPI:
     @app.get("/document-types")
     def document_types() -> list[dict]:
         return [
-            {"id": m, **{k: v for k, v in s.items() if k in ("name", "description", "ready")}}
+            {
+                "id": m,
+                **{
+                    k: v
+                    for k, v in s.items()
+                    if k in ("name", "description", "ready", "model", "unit")
+                },
+            }
             for m, s in _module_status().items()
         ]
 
@@ -139,6 +160,13 @@ def create_app() -> FastAPI:
     @app.post("/feedback", status_code=204)
     def feedback(item: Feedback) -> None:
         log_feedback(item.document_type, item.model_run, item.label, item.agree)
+
+    @app.get("/examples/{document_type}", include_in_schema=False)
+    def example(document_type: str):
+        path = EXAMPLES_DIR / EXAMPLES.get(document_type, "missing")
+        if not path.is_file():
+            return _error(404, "no_example", "No example for this document type.")
+        return PlainTextResponse(path.read_text(encoding="utf-8"))
 
     @app.get("/", include_in_schema=False)
     def index() -> FileResponse:

@@ -39,8 +39,14 @@
       </div>
       <div class="actions">
         <button type="button" id="analyze" class="primary" disabled>Analyse</button>
+        <button type="button" id="example" class="secondary" disabled>Try an example</button>
         <span id="status" role="status" aria-live="polite"></span>
       </div>
+    </section>
+
+    <section class="card" id="workflow" hidden aria-labelledby="workflow-title">
+      <h2 id="workflow-title"><span class="step">3</span> What ClauseGuard is doing</h2>
+      <ol id="pipeline" class="pipeline"></ol>
     </section>
 
     <section id="results" hidden aria-labelledby="results-title">
