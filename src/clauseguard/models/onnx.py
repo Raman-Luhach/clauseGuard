@@ -21,6 +21,7 @@ from clauseguard.models.base import MultiLabelModel
 
 EXPORT_DIR = "onnx"
 MAX_F1_DROP = 0.01
+MAX_COMPARE_UNITS = 4000
 INPUT_NAMES = ("input_ids", "attention_mask", "token_type_ids")
 
 
@@ -111,6 +112,21 @@ def _export_graph(wrapper, sample: dict, names: list[str], path: Path) -> str:
         return "dynamo"
 
 
+def quantize_int8(fp32: Path, int8: Path) -> None:
+    """Dynamic INT8 quantisation that is safe on every CPU.
+
+    Plain 8-bit signed weights saturate on x86 CPUs without VNNI instructions (most cloud
+    machines, including Kaggle's and Hugging Face's), which destroyed a fine-tuned LEGAL-BERT
+    (macro-F1 0.0). 7-bit weights (reduce_range) quantised per channel avoid the overflow, as
+    ONNX Runtime's documentation recommends; compare_backends still checks the result.
+    """
+    from onnxruntime.quantization import QuantType, quantize_dynamic
+
+    quantize_dynamic(
+        str(fp32), str(int8), weight_type=QuantType.QInt8, per_channel=True, reduce_range=True
+    )
+
+
 def export_onnx(
     run_path: Path, *, quantize: bool = True, log: Callable[[str], None] = print
 ) -> dict:
@@ -142,11 +158,7 @@ def export_onnx(
     hf.eval()  # the TorchScript exporter restores the module's previous training flag
     files = {"fp32": "model.onnx"}
     if quantize and exporter == "torchscript":
-        from onnxruntime.quantization import QuantType, quantize_dynamic
-
-        quantize_dynamic(
-            str(out / "model.onnx"), str(out / "model.int8.onnx"), weight_type=QuantType.QInt8
-        )
+        quantize_int8(out / "model.onnx", out / "model.int8.onnx")
         files["int8"] = "model.int8.onnx"
     backend = getattr(tokenizer, "backend_tokenizer", None) or tokenizer._tokenizer
     backend.save(str(out / "tokenizer.json"))
@@ -176,9 +188,18 @@ def compare_backends(
     *,
     log: Callable[[str], None] = print,
 ) -> dict:
-    """Macro-F1 and speed of PyTorch vs ONNX variants on the same units; picks what to serve."""
+    """Macro-F1 and speed of PyTorch vs ONNX variants on the same units; picks what to serve.
+
+    At most ``MAX_COMPARE_UNITS`` units are used (a fixed random sample): enough to measure
+    the F1 change, without running three models over 14k contract sentences on a CPU."""
     from clauseguard.evaluation.metrics import compute_metrics
     from clauseguard.models.transformer import TransformerModel
+
+    if len(texts) > MAX_COMPARE_UNITS:
+        keep = np.sort(
+            np.random.default_rng(0).choice(len(texts), MAX_COMPARE_UNITS, replace=False)
+        )
+        texts, y = [texts[i] for i in keep], y[keep]
 
     candidates: dict[str, Callable[[], MultiLabelModel]] = {
         "torch": lambda: TransformerModel.load(run_path / "model", device="cpu"),
