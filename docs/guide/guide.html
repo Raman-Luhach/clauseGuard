@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>How ClauseGuard Works</title>
+<style>
+  @page { size: A4; margin: 20mm 19mm 20mm 19mm; }
+  :root {
+    --text: #1c1c1a; --muted: #5f5d57; --rule: #d9d4c8; --soft: #f5f3ee;
+    --accent: #1f4d3c; --accent-soft: #e8f0ea; --high: #b3261e; --medium: #a3540a; --low: #7d6608;
+    --serif: "Iowan Old Style", "Charter", Georgia, serif;
+    --sans: -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+  html { background: #fff; }
+  body { margin: 0; color: var(--text); font: 10.3pt/1.55 var(--serif); }
+  h1, h2, h3, h4 { font-family: var(--serif); font-weight: 600; line-height: 1.25; }
+  h1 { font-size: 26pt; margin: 0 0 6pt; letter-spacing: -0.01em; }
+  h2 { font-size: 16pt; margin: 0 0 4pt; padding-top: 2pt; }
+  h3 { font-size: 12pt; margin: 16pt 0 4pt; }
+  h4 { font-size: 10.5pt; margin: 10pt 0 2pt; }
+  p { margin: 0 0 7pt; }
+  ul, ol { margin: 0 0 8pt; padding-left: 16pt; }
+  li { margin-bottom: 2pt; }
+  code { font: 8.8pt/1.4 "SF Mono", Menlo, monospace; background: var(--soft); padding: 0 3pt; border-radius: 2pt; }
+  .kicker { font: 600 7.5pt/1 var(--sans); letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin: 0 0 6pt; }
+  .lead { font-size: 12pt; color: var(--muted); max-width: 140mm; }
+  .part { break-before: page; }
+  .part-head { border-bottom: 1.5pt solid var(--text); padding-bottom: 6pt; margin-bottom: 12pt; }
+  .part-head p { color: var(--muted); margin: 2pt 0 0; }
+  section.stage { margin-bottom: 14pt; }
+  .stage-title, h3, h4 { break-after: avoid; }
+  .plain, .example, .summary, .formula, tr, li, svg { break-inside: avoid; }
+  .stage-title { display: flex; align-items: baseline; gap: 8pt; border-top: 0.75pt solid var(--rule); padding-top: 9pt; margin: 0 0 6pt; }
+  .stage-title .n { font: 600 9pt/1 var(--sans); color: var(--accent); min-width: 18pt; }
+  .stage-title h3 { margin: 0; }
+  .ui { font: 8pt/1 var(--sans); color: var(--muted); margin-left: auto; }
+  .plain { background: var(--accent-soft); border-left: 2.5pt solid var(--accent); padding: 6pt 9pt; margin: 6pt 0 8pt; }
+  .plain b { font-family: var(--sans); font-size: 8pt; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); display: block; margin-bottom: 1pt; }
+  .example { background: var(--soft); padding: 6pt 9pt; font-size: 9.3pt; margin: 6pt 0 8pt; }
+  .example b { font-family: var(--sans); font-size: 7.5pt; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 2pt; }
+  .summary { border: 0.75pt solid var(--rule); padding: 7pt 10pt; margin: 8pt 0 0; font-size: 9.6pt; }
+  .summary b.t { font-family: var(--sans); font-size: 7.5pt; letter-spacing: 0.08em; text-transform: uppercase; display: block; margin-bottom: 2pt; }
+  table { border-collapse: collapse; width: 100%; margin: 4pt 0 10pt; font: 8.6pt/1.4 var(--sans); }
+  th { text-align: left; font-weight: 600; border-bottom: 1pt solid var(--text); padding: 3pt 6pt 3pt 0; }
+  td { border-bottom: 0.5pt solid var(--rule); padding: 3.5pt 6pt 3.5pt 0; vertical-align: top; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .formula { font: 10pt/1.5 "SF Mono", Menlo, monospace; text-align: center; background: var(--soft); padding: 6pt; margin: 6pt 0 8pt; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14pt; }
+  .cover { height: 250mm; display: flex; flex-direction: column; }
+  .cover .top { flex: 1; padding-top: 30mm; }
+  .cover .brand { font: 600 11pt/1 var(--serif); color: var(--accent); margin-bottom: 26mm; }
+  .toc { columns: 2; column-gap: 14pt; font-size: 9.6pt; padding: 0; list-style: none; border-top: 0.75pt solid var(--rule); padding-top: 8pt; }
+  .toc li { break-inside: avoid; margin-bottom: 4pt; }
+  .toc span { color: var(--muted); font: 600 8pt var(--sans); display: inline-block; width: 22pt; }
+  svg text { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; }
+  .sev { font: 700 7pt/1 var(--sans); letter-spacing: 0.06em; padding: 1.5pt 4pt; border-radius: 2pt; }
+  .sev.h { background: #fbe4e1; color: var(--high); } .sev.m { background: #fcebd5; color: var(--medium); } .sev.l { background: #f8f0c6; color: var(--low); }
+  .final li { margin-bottom: 3pt; }
+  .part:last-child p, .part:last-child li { font-size: 9.6pt; }
+  .part:last-child h3 { margin-top: 10pt; }
+  .part:last-child td { padding-top: 2.5pt; padding-bottom: 2.5pt; }
+  .small { font-size: 8.8pt; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<div class="cover">
+  <div class="top">
+    <div class="brand">ClauseGuard</div>
+    <p class="kicker">A guide to the system</p>
+    <h1>How ClauseGuard works,<br>from upload to risk report</h1>
+    <p class="lead">This guide follows a document through each step of the system and then explains how the three models behind it were built, trained and checked. Each step says what happens, why, and how, then ends with a short summary.</p>
+  </div>
+  <ol class="toc">
+    <li><span>1</span>What ClauseGuard is</li>
+    <li><span>2</span>The big picture</li>
+    <li><span>3</span>Read the document</li>
+    <li><span>4</span>Extract and clean text</li>
+    <li><span>5</span>Split into units</li>
+    <li><span>6</span>Classify each unit</li>
+    <li><span>7</span>Score the risk</li>
+    <li><span>8</span>Explain the flags</li>
+    <li><span>9</span>The datasets</li>
+    <li><span>10</span>Preparing the data</li>
+    <li><span>11</span>The models</li>
+    <li><span>12</span>Training on a GPU</li>
+    <li><span>13</span>Measuring quality</li>
+    <li><span>14</span>Serving the app</li>
+    <li><span>15</span>Limitations</li>
+    <li><span>16</span>Summary of everything</li>
+  </ol>
+</div>
+
+<!-- ============ PART 1 ============ -->
+<div class="part">
+  <div class="part-head">
+    <p class="kicker">Part one</p>
+    <h2>What ClauseGuard is</h2>
+    <p>The problem, the three modules, and the results in one page.</p>
+  </div>
+
+  <p>Most people accept terms of service, privacy policies and contracts without reading them. They are long and written in legal language, and the clauses that matter are scattered through them. ClauseGuard reads the document for you and points at the clauses that could work against you. Examples include a company that can close your account without warning, a policy that shares your data with advertisers, or a contract that renews itself for ten years.</p>
+
+  <p>It does this with three separate <b>modules</b>, one for each kind of document. You choose the document type yourself; ClauseGuard does not guess it. That was a deliberate choice: each kind of document has its own vocabulary and its own risks, and each public dataset labels a different kind of text unit. A single model for all three would be weaker at each of them.</p>
+
+  <table>
+    <tr><th></th><th>Terms of Service</th><th>Privacy Policy</th><th>Contract</th></tr>
+    <tr><td><b>Dataset</b></td><td>UNFAIR-ToS (CLAUDETTE / LexGLUE)</td><td>OPP-115</td><td>CUAD (Atticus Project)</td></tr>
+    <tr><td><b>Text unit</b></td><td>Sentence</td><td>Paragraph</td><td>Sentence</td></tr>
+    <tr><td><b>Risk labels</b></td><td>8 (e.g. arbitration, unilateral change)</td><td>10 categories + 3 rule-based modifiers</td><td>19 (e.g. exclusivity, auto-renewal)</td></tr>
+    <tr><td><b>Model served</b></td><td>LEGAL-BERT</td><td>PrivBERT</td><td>LEGAL-BERT</td></tr>
+    <tr><td><b>Test macro F1</b></td><td>0.76</td><td>0.78</td><td>0.59</td></tr>
+    <tr><td><b>Risky clauses found</b></td><td>77% (86% precision)</td><td>91% (93% precision)</td><td>61% (71% precision)</td></tr>
+  </table>
+
+  <p>The output is a <b>risk report</b> in the browser. It has a score from 0 to 100, your document with the risky clauses highlighted, and a card for each clause. Each card shows the risk type, the severity, the model's confidence and a plain-English explanation.</p>
+
+  <div class="summary"><b class="t">In short</b>Three independent classifiers, one per document type, each trained on its own public dataset. They share one pipeline and one report format.</div>
+
+</div>
+<div class="part">
+  <div class="part-head">
+    <p class="kicker">Part one, continued</p>
+    <h2>The big picture</h2>
+    <p>How the offline and online halves fit together.</p>
+  </div>
+  <p>ClauseGuard has two halves. The <b>offline half</b> ran once, on a free Kaggle GPU. It downloaded the datasets, converted them into a common format, trained the models, measured them and packaged the best one for each module. The <b>online half</b> runs every time you press Analyse. Your document goes through six steps, the same six you see in the app's “What ClauseGuard is doing” panel.</p>
+
+  <svg viewBox="0 0 680 250" width="100%" role="img" aria-label="Pipeline diagram">
+    <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5f5d57"/></marker></defs>
+    <text x="0" y="14" font-size="10" font-weight="700" fill="#1f4d3c" letter-spacing="1.2">OFFLINE · ONCE, ON A GPU</text>
+    <g font-size="10.5" fill="#1c1c1a">
+      <rect x="0" y="24" width="120" height="44" rx="4" fill="#f5f3ee" stroke="#d9d4c8"/><text x="60" y="44" text-anchor="middle" font-weight="600">Public datasets</text><text x="60" y="58" text-anchor="middle" font-size="9" fill="#5f5d57">ToS · OPP-115 · CUAD</text>
+      <rect x="140" y="24" width="120" height="44" rx="4" fill="#f5f3ee" stroke="#d9d4c8"/><text x="200" y="44" text-anchor="middle" font-weight="600">Convert to units</text><text x="200" y="58" text-anchor="middle" font-size="9" fill="#5f5d57">sentence / paragraph</text>
+      <rect x="280" y="24" width="120" height="44" rx="4" fill="#f5f3ee" stroke="#d9d4c8"/><text x="340" y="44" text-anchor="middle" font-weight="600">Train models</text><text x="340" y="58" text-anchor="middle" font-size="9" fill="#5f5d57">baselines + BERTs, 3 seeds</text>
+      <rect x="420" y="24" width="120" height="44" rx="4" fill="#f5f3ee" stroke="#d9d4c8"/><text x="480" y="44" text-anchor="middle" font-weight="600">Evaluate, pick</text><text x="480" y="58" text-anchor="middle" font-size="9" fill="#5f5d57">thresholds, test once</text>
+      <rect x="560" y="24" width="120" height="44" rx="4" fill="#1f4d3c"/><text x="620" y="44" text-anchor="middle" font-weight="600" fill="#fff">Package (ONNX)</text><text x="620" y="58" text-anchor="middle" font-size="9" fill="#cfe0d6">one model per module</text>
+    </g>
+    <g stroke="#5f5d57" stroke-width="1.2" marker-end="url(#a)"><line x1="120" y1="46" x2="138" y2="46"/><line x1="260" y1="46" x2="278" y2="46"/><line x1="400" y1="46" x2="418" y2="46"/><line x1="540" y1="46" x2="558" y2="46"/></g>
+    <path d="M620 68 V 100 H 620" stroke="#1f4d3c" stroke-width="1.2" stroke-dasharray="3 3" fill="none"/>
+    <text x="628" y="96" font-size="9" fill="#1f4d3c">loaded by the app</text>
+    <text x="0" y="122" font-size="10" font-weight="700" fill="#1f4d3c" letter-spacing="1.2">ONLINE · EVERY TIME YOU PRESS ANALYSE</text>
+    <g font-size="10.5" fill="#1c1c1a">
+      <rect x="0" y="132" width="100" height="50" rx="4" fill="#fff" stroke="#1c1c1a"/><text x="50" y="152" text-anchor="middle" font-weight="600">1 Read</text><text x="50" y="167" text-anchor="middle" font-size="9" fill="#5f5d57">PDF / text, checks</text>
+      <rect x="116" y="132" width="100" height="50" rx="4" fill="#fff" stroke="#1c1c1a"/><text x="166" y="152" text-anchor="middle" font-weight="600">2 Clean</text><text x="166" y="167" text-anchor="middle" font-size="9" fill="#5f5d57">fix chars, unwrap</text>
+      <rect x="232" y="132" width="100" height="50" rx="4" fill="#fff" stroke="#1c1c1a"/><text x="282" y="152" text-anchor="middle" font-weight="600">3 Split</text><text x="282" y="167" text-anchor="middle" font-size="9" fill="#5f5d57">sentences / paras</text>
+      <rect x="348" y="132" width="100" height="50" rx="4" fill="#1f4d3c"/><text x="398" y="152" text-anchor="middle" font-weight="600" fill="#fff">4 Classify</text><text x="398" y="167" text-anchor="middle" font-size="9" fill="#cfe0d6">model, per unit</text>
+      <rect x="464" y="132" width="100" height="50" rx="4" fill="#fff" stroke="#1c1c1a"/><text x="514" y="152" text-anchor="middle" font-weight="600">5 Score</text><text x="514" y="167" text-anchor="middle" font-size="9" fill="#5f5d57">findings, 0–100</text>
+      <rect x="580" y="132" width="100" height="50" rx="4" fill="#fff" stroke="#1c1c1a"/><text x="630" y="152" text-anchor="middle" font-weight="600">6 Explain</text><text x="630" y="167" text-anchor="middle" font-size="9" fill="#5f5d57">plain English</text>
+    </g>
+    <g stroke="#5f5d57" stroke-width="1.2" marker-end="url(#a)"><line x1="100" y1="157" x2="114" y2="157"/><line x1="216" y1="157" x2="230" y2="157"/><line x1="332" y1="157" x2="346" y2="157"/><line x1="448" y1="157" x2="462" y2="157"/><line x1="564" y1="157" x2="578" y2="157"/></g>
+    <rect x="0" y="204" width="680" height="40" rx="4" fill="#f5f3ee"/>
+    <text x="14" y="221" font-size="9.5" fill="#1c1c1a"><tspan font-weight="700">Throughout:</tspan> every character keeps a link back to its place in your original document, so</text>
+    <text x="14" y="235" font-size="9.5" fill="#1c1c1a">highlights land on exactly the right words, and PDF findings know their page number.</text>
+  </svg>
+</div>
+
+<!-- ============ PART 2 ============ -->
+<div class="part">
+  <div class="part-head">
+    <p class="kicker">Part two</p>
+    <h2>Analysing a document, step by step</h2>
+    <p>The six stages shown in the app, in the order they run. Source code is in <code>src/clauseguard/</code>.</p>
+  </div>
+
+  <section class="stage">
+    <div class="stage-title"><span class="n">01</span><h3>Read the document</h3><span class="ui">ingestion/loader.py, pdf.py, language.py</span></div>
+    <p>You can upload a PDF or a .txt file, or paste text. Text files are decoded as UTF-8. PDFs are read with <b>pdfplumber</b>, which pulls the text layer out of each page in reading order. While reading, ClauseGuard remembers where each page starts, so a finding can later tell you its page number.</p>
+    <p>PDFs bring their own noise. Every page repeats the same header (“ACME Corp — Confidential”), a footer and a page number. If they were left in, they would interrupt sentences in the middle. So the reader looks at the first and last few lines of every page. It removes lines that repeat on most pages (with digits ignored, so “Page 3” and “Page 4” count as the same line), and it removes lines that are only a page number.</p>
+    <p>Then the document is checked before any model work starts:</p>
+    <ul>
+      <li><b>Length:</b> at least 50 words (shorter text is not a full document) and at most 150,000.</li>
+      <li><b>Language:</b> <i>langdetect</i> guesses the language. If it is at least 80% sure the text is not English, the request is refused with a clear message, because the models were trained on English only.</li>
+      <li><b>Scanned PDFs:</b> a PDF that is only images has no text layer, so the reader finds no text and says so. OCR is not included.</li>
+    </ul>
+    <div class="plain"><b>In plain words</b>Get the raw text out of the file, drop the page furniture (headers, footers, page numbers), and reject input the models can't handle.</div>
+  </section>
+
+  <section class="stage">
+    <div class="stage-title"><span class="n">02</span><h3>Extract and clean text</h3><span class="ui">ingestion/clean.py, textmap.py</span></div>
+    <p>Raw text is messy in ways that confuse a model even though a human reader would not notice:</p>
+    <ul>
+      <li><b>Character normalisation.</b> Curly quotes become straight quotes, the various dashes (– — ‒ −) become “-”, “…” becomes “...”, and unusual spaces become normal spaces. Invisible characters are deleted: zero-width spaces, soft hyphens and byte-order marks.</li>
+      <li><b>Un-wrapping lines.</b> PDFs and emails break lines at a fixed width, so one sentence can be spread over four lines. For each single line break, the cleaner decides whether it is a <i>hard wrap</i> (join the lines) or <i>structure</i> (keep the break). It keeps the break if the next line starts a list item (“1.”, “(a)”, “(iv)”, “•”), if the line looks like a heading, or if the line already ends a sentence. Otherwise it joins the lines with a space. Blank lines always stay, because they mark paragraphs.</li>
+      <li><b>Whitespace.</b> Runs of spaces collapse to one, and trailing spaces are removed.</li>
+    </ul>
+    <p>The most important detail is the <b>text map</b> (<code>TextWithMap</code>). Every edit above moves characters around. The text map records, for every character of the cleaned text, where it came from in the original. The model reads clean text, but the highlight in your browser is drawn on the original text in exactly the right place.</p>
+    <div class="example"><b>Example</b>“The Company may terminate your<br>account at any time—without notice.”<br>→ “The Company may terminate your account at any time-without notice.” (one line; the dash is normalised; the map still points back to both original lines)</div>
+    <div class="plain"><b>In plain words</b>Make the text uniform and rebuild real sentences out of broken lines, while keeping a link back to the original so the highlights are accurate.</div>
+  </section>
+
+  <section class="stage">
+    <div class="stage-title"><span class="n">03</span><h3>Split into units</h3><span class="ui">ingestion/segment.py</span></div>
+    <p>A model does not read a whole 10,000-word document at once. It reads one <b>unit</b> at a time and decides which risks that unit contains. The unit has to match what the model saw in training, so it depends on the module:</p>
+    <h4>Sentences: Terms of Service and Contracts</h4>
+    <p>Each line of cleaned text is passed to <b>spaCy's</b> statistical sentence splitter (<code>senter</code> from <code>en_core_web_sm</code>). It is about 13 times faster than the full parser and just as good for this job. Legal text breaks general-purpose splitters in predictable ways, so rules correct the result afterwards:</p>
+    <ul>
+      <li>Abbreviations such as “Inc.”, “Ltd.”, “U.S.”, “Sec.” and “No.” do not end a sentence.</li>
+      <li>Clause numbers such as “4.2.” or “(b)” are kept with the sentence they introduce.</li>
+      <li>Very long run-on sentences (common in contracts) are cut at “; ” first, then at “, ”, so they fit the model's length limit.</li>
+    </ul>
+    <h4>Paragraphs: Privacy Policy</h4>
+    <p>OPP-115 labels <i>segments</i> that are roughly one paragraph long (median 59 words). So a new unit starts at a blank line or a heading, and a heading stays attached to the text below it. Units shorter than 12 words are merged into the next one, and units longer than 180 words are cut at a sentence boundary. This also works for PDFs, where paragraphs are often not separated by blank lines.</p>
+    <h4>Units that are skipped</h4>
+    <p>Headings such as “3. Termination” are not classified. A heading repeats the topic of the clause beneath it, so classifying it would report the same clause twice. A heading is detected as short, without closing punctuation and mostly capitalised. Fragments below a minimum length (3 words for sentences, 5 for paragraphs) are also skipped.</p>
+    <div class="plain"><b>In plain words</b>Cut the document into the same kind of pieces the model learned from: sentences for ToS and contracts, paragraphs for privacy policies.</div>
+  </section>
+
+  <section class="stage">
+    <div class="stage-title"><span class="n">04</span><h3>Classify each unit</h3><span class="ui">models/onnx.py, modules/base.py</span></div>
+    <p>This is the machine-learning step. Each unit is turned into numbers and passed through the module's fine-tuned transformer.</p>
+    <ol>
+      <li><b>Match the training style.</b> The UNFAIR-ToS training sentences were lowercased and tokenised in Penn-Treebank style by the dataset's authors (“company 's”, “are n't”, punctuation separated by spaces). So ToS input is rewritten the same way before the model sees it. A model performs best on text that looks like its training data. Privacy and contract text is used as it is.</li>
+      <li><b>Tokenise.</b> The model's own tokenizer splits text into word pieces (“terminate” → “terminat”, “##e”) and maps them to IDs. Units are capped at 128 tokens for ToS, 512 for privacy and 256 for contracts. These limits were chosen from the data so that only 0–1.4% of training units are cut.</li>
+      <li><b>Run the model.</b> The transformer reads all the tokens together, with attention, and produces one score per label. A <b>sigmoid</b> turns each score into a probability between 0 and 1. The task is <b>multi-label</b>: one sentence can be both “arbitration” and “jurisdiction”, so the labels are scored independently and do not compete.</li>
+      <li><b>Apply thresholds.</b> A label is flagged when its probability passes that label's <b>own threshold</b>. Each threshold was tuned on validation data to maximise F1. A common label may need 0.5, while a rare one may work best at 0.3.</li>
+    </ol>
+    <p>The models run through <b>ONNX Runtime</b> on the CPU, so the app does not need PyTorch or a GPU. Units are processed in batches. This step takes most of the analysis time: about 7–15 seconds for a typical document on a laptop.</p>
+    <div class="plain"><b>In plain words</b>Rewrite each piece in the style the model knows, then ask the model “which risks are in this sentence, and how sure are you?” Keep only the answers above each label's tuned cut-off.</div>
+  </section>
+
+  <section class="stage">
+    <div class="stage-title"><span class="n">05</span><h3>Score the risk</h3><span class="ui">scoring/risk_score.py, rules.py, configs/taxonomy.yaml</span></div>
+    <h4>From flags to findings</h4>
+    <p>Each flagged unit becomes a <b>finding</b>. The taxonomy file gives every label a readable name, a risk group (Rights &amp; account, Legal risk, Personal data, Money &amp; commitments, Protective, Informational) and a <b>severity</b>: <span class="sev h">HIGH</span> <span class="sev m">MEDIUM</span> <span class="sev l">LOW</span>, plus “protective” and “info” for clauses that help you or are neutral. If consecutive units share the same main label, they are merged into one finding, so one long clause gives one card, not five.</p>
+    <p>The privacy module adds <b>rules</b> on top of the model. Some OPP-115 details work better as severity modifiers than as separate risks. Sharing data <i>for advertising</i> raises the severity. A sentence saying the company does <i>not</i> do something lowers it. Policy changes made <i>without personal notice</i> raise it. The module also checks for expected protections, such as deletion rights, security measures and opt-out choices, and lists which ones are present and which are missing.</p>
+    <h4>The 0–100 score</h4>
+    <p>For each distinct risky label in the document, ClauseGuard takes its highest confidence <i>p</i> and its severity weight <i>w</i> (high = 3, medium = 2, low = 1) and adds them up:</p>
+    <div class="formula">raw = Σ (w × p)   →   score = 100 × (1 − e<sup>−raw / k</sup>)</div>
+    <p>Counting each label only once means a long document that repeats the same clause is not penalised for its length. What raises the score is how many <i>different</i> serious risks there are. The exponential curve maps any raw value onto 0–100 and flattens out near the top. The constant <i>k</i> was <b>calibrated</b> on validation documents so that the median document of each type scores 50. A score of 50 therefore means “about as risky as a typical document of this kind”. Bands: <b>low</b> below 34, <b>medium</b> 34–66, <b>high</b> 67 and above.</p>
+    <div class="plain"><b>In plain words</b>Turn flags into readable findings with a severity, then sum the severity of each distinct risk into a score that reads “compared with a typical document of this type”.</div>
+  </section>
+
+  <section class="stage">
+    <div class="stage-title"><span class="n">06</span><h3>Explain the flags</h3><span class="ui">explain/templates.py, explain/llm.py</span></div>
+    <p>Every label has a hand-written, plain-English <b>template</b> explaining what the clause means for you. For example: “A party commits to buy, pay for or deliver a minimum amount, even if it ends up needing less.” Templates are instant, free and always correct about what the label means. They are the default.</p>
+    <p>Optionally (<code>CLAUSEGUARD_LLM=anthropic</code> plus an API key), ClauseGuard can ask <b>Claude</b> to write an explanation specific to each clause. Claude must reply in a fixed JSON format. If the call fails or returns something invalid, that finding keeps its template, so the report never breaks.</p>
+    <p>The report then shows the score, the risk groups, your document with colour-coded highlights and the finding cards. Each card has “Show in document” and <b>Correct / Not correct</b> buttons. Feedback is logged as metadata only (label, vote, model version), never the document text. Documents are analysed in memory and are not stored.</p>
+    <div class="plain"><b>In plain words</b>Attach a clear, human explanation to every flag, from fixed templates by default or from Claude if you switch it on.</div>
+  </section>
+
+  <div class="summary"><b class="t">Summary of part two</b>
+    Read the file → clean it while keeping a map back to the original → cut it into the units the model knows → score each unit for every risk label → turn flags into findings and a 0–100 score → explain them in plain English.
+  </div>
+</div>
+
+<!-- ============ PART 3 ============ -->
+<div class="part">
+  <div class="part-head">
+    <p class="kicker">Part three</p>
+    <h2>How the models were built</h2>
+    <p>Data, training, evaluation and packaging: the offline half.</p>
+  </div>
+
+  <section class="stage">
+    <div class="stage-title"><span class="n">07</span><h3>The datasets</h3><span class="ui">data/download.py, data/manifest.yaml</span></div>
+    <p>All three datasets are public research corpora with expert annotations. Each download is pinned to a fixed version and checked with a checksum, so re-running gives exactly the same data.</p>
+    <table>
+      <tr><th>Dataset</th><th>What it is</th><th class="num">Train</th><th class="num">Validation</th><th class="num">Test</th></tr>
+      <tr><td><b>UNFAIR-ToS</b></td><td>50 terms of service of online platforms, each sentence tagged by legal experts with 8 kinds of potentially unfair clause</td><td class="num">5,532<br><span class="small">30 docs</span></td><td class="num">2,275<br><span class="small">10 docs</span></td><td class="num">1,607<br><span class="small">10 docs</span></td></tr>
+      <tr><td><b>OPP-115</b></td><td>115 website privacy policies, each paragraph annotated by 3 law students with data-practice categories</td><td class="num">2,634<br><span class="small">80 docs</span></td><td class="num">652<br><span class="small">17 docs</span></td><td class="num">506<br><span class="small">18 docs</span></td></tr>
+      <tr><td><b>CUAD</b></td><td>510 commercial contracts from SEC filings, with exact text spans for 41 clause types (19 risk-relevant ones used)</td><td class="num">83,221<br><span class="small">367 docs</span></td><td class="num">13,974<br><span class="small">41 docs</span></td><td class="num">20,418<br><span class="small">102 docs</span></td></tr>
+    </table>
+    <p class="small">Numbers are units (sentences or paragraphs). About 89% of ToS sentences and 94% of contract sentences carry no risk label. Most of a document is harmless, which makes the task harder.</p>
+  </section>
+
+  <section class="stage">
+    <div class="stage-title"><span class="n">08</span><h3>Preparing the data</h3><span class="ui">data/tos.py, privacy.py, contract.py, splits.py</span></div>
+    <p>Every dataset is converted into one shared table format: a row per unit, with its text, its document, its split and a list of labels. Labels are prefixed (<code>tos:</code>, <code>privacy:</code>, <code>contract:</code>) so the modules can be combined later without clashes. Each dataset needs its own conversion:</p>
+    <ul>
+      <li><b>ToS</b> is already one row per sentence, so it is used almost directly.</li>
+      <li><b>OPP-115</b> has three annotators per policy who sometimes disagree. A label is kept only when <b>at least 2 of 3</b> agree (majority vote). Certain sub-attributes, such as “purpose: advertising” or “does not”, become the rule-based modifiers from step 5.</li>
+      <li><b>CUAD</b> marks <i>spans</i> of text, not sentences. Contracts are split with the same splitter the app uses. A sentence gets a label when it overlaps the span by at least half of the shorter of the two. Because 94% of sentences have no label, training uses all labelled sentences plus <b>4 unlabelled ones per labelled one</b> (negative sampling), so the model does not learn to always answer “nothing”.</li>
+    </ul>
+    <p><b>Splitting by document.</b> Train, validation and test are split by <i>whole document</i>, never by sentence. If sentences from the same contract appeared in both train and test, the model could recognise the contract instead of the clause, and the scores would look better than they really are. A <b>data card</b> is generated for each dataset. It records label counts, token lengths, duplicates and cross-split overlap, so these checks are written down.</p>
+    <div class="plain"><b>In plain words</b>Put three differently shaped datasets into one format, settle disagreements by vote, map contract spans to sentences, and keep every document entirely in one split.</div>
+  </section>
+
+  <section class="stage">
+    <div class="stage-title"><span class="n">09</span><h3>The models</h3><span class="ui">models/baselines.py, transformer.py</span></div>
+    <p>Several models were trained per module, from simplest to strongest, so each step up has to earn its place:</p>
+    <ul>
+      <li><b>Majority baseline</b>: always predicts the most common answer. It shows what “no skill” scores.</li>
+      <li><b>TF-IDF + logistic regression</b>: counts which words and word pairs appear, weighted by how distinctive they are, with one linear classifier per label. It is fast and surprisingly strong; any model worth deploying must beat it.</li>
+      <li><b>DistilBERT</b>: a smaller, general-English transformer.</li>
+      <li><b>LEGAL-BERT</b>: BERT pre-trained on 12 GB of legislation, court cases and contracts, so it already “speaks legal”.</li>
+      <li><b>PrivBERT</b>: BERT pre-trained on about 1 million privacy policies, specialised for privacy text.</li>
+    </ul>
+    <p><b>Fine-tuning</b> takes one of these pre-trained models and adds a small output layer with one output per label. The whole network is then trained further on the labelled units. The pre-training gives the model a general understanding of language; the fine-tuning teaches it the specific risk labels.</p>
+  </section>
+
+  <section class="stage">
+    <div class="stage-title"><span class="n">10</span><h3>Training on a GPU</h3><span class="ui">models/train.py, gpu.py, notebooks/train_on_gpu.ipynb</span></div>
+    <p>Fine-tuning base-size transformers is too heavy for an 8 GB laptop, so all code was written and smoke-tested on the Mac, then run in one go on a free <b>Kaggle</b> GPU. The notebook clones the repo and runs <code>scripts/train_on_gpu.sh</code>, which installs dependencies, prepares data, trains, evaluates and packs everything into one results archive. The session is resumable: finished runs are skipped if it restarts.</p>
+    <p>Key training choices:</p>
+    <ul>
+      <li><b>Loss:</b> binary cross-entropy per label, with a <b>positive weight</b> (square root of the negative/positive ratio, capped at 20). This makes missing a rare risk cost more than a false alarm on it.</li>
+      <li><b>Mixed precision</b> (AMP) to train faster on the GPU.</li>
+      <li><b>Early stopping:</b> after each epoch the model is scored on validation (macro PR-AUC). Training stops when it no longer improves, and the best epoch is kept.</li>
+      <li><b>Three random seeds</b> per model. Results are reported as mean ± spread, which shows how stable they are.</li>
+      <li><b>Per-label thresholds</b> are tuned on validation after training (step 4).</li>
+    </ul>
+    <p>The best model per module was chosen on <b>validation</b> macro F1. The <b>test</b> set was used only once, at the very end, to report honest numbers.</p>
+  </section>
+
+  <section class="stage">
+    <div class="stage-title"><span class="n">11</span><h3>Measuring quality</h3><span class="ui">evaluation/</span></div>
+    <div class="two">
+      <div>
+        <p><b>Precision</b>: of the clauses flagged, how many were truly risky.<br>
+        <b>Recall</b>: of the truly risky clauses, how many were flagged.<br>
+        <b>F1</b>: a balance of the two; high only when both are high.</p>
+      </div>
+      <div>
+        <p><b>Macro F1</b>: F1 computed for each label and then averaged, so rare labels count as much as common ones. This is the main metric, and the strictest one.<br>
+        <b>Any-risk</b>: was the unit flagged with <i>any</i> risk at all? This is closest to what a user cares about.</p>
+      </div>
+    </div>
+    <table>
+      <tr><th>Module (model)</th><th class="num">Validation macro F1</th><th class="num">Test macro F1</th><th class="num">Any-risk recall</th><th class="num">Any-risk precision</th><th class="num">Document-level F1</th></tr>
+      <tr><td>ToS (LEGAL-BERT)</td><td class="num">0.804</td><td class="num">0.760</td><td class="num">0.77</td><td class="num">0.86</td><td class="num">0.96</td></tr>
+      <tr><td>Privacy (PrivBERT)</td><td class="num">0.842</td><td class="num">0.782</td><td class="num">0.91</td><td class="num">0.93</td><td class="num">0.93</td></tr>
+      <tr><td>Contract (LEGAL-BERT)</td><td class="num">0.632</td><td class="num">0.591</td><td class="num">0.61</td><td class="num">0.71</td><td class="num">0.82</td></tr>
+    </table>
+    <p><b>Document-level F1</b> asks whether the document contains this risk <i>anywhere</i>. It is high (0.82–0.96) because missing one sentence rarely matters when the same risk appears elsewhere. Contracts score lowest at unit level: there are 19 labels, many of them rare, and the exact wording varies a lot. The domain models beat DistilBERT in every module, and every transformer beat its TF-IDF baseline.</p>
+    <p>Beyond the scores: <b>robustness tests</b> check that paraphrased clauses are still caught and that neutral text is not flagged. <b>Benchmarks</b> measure speed and memory, and an <b>error analysis</b> lists the most-confused labels.</p>
+  </section>
+
+  <section class="stage">
+    <div class="stage-title"><span class="n">12</span><h3>Serving the app</h3><span class="ui">models/onnx.py, web/app.py, Dockerfile</span></div>
+    <p>The chosen models were exported to <b>ONNX</b>, a portable format that runs fast on a CPU without PyTorch. This keeps the app small. A compressed <b>INT8</b> version, 4× smaller, was also tried. It is used only if it loses no more than 0.01 macro F1. It lost more (contract: 0.54 vs 0.58), so the full-precision models are served. Accuracy was chosen over size.</p>
+    <p>The app is a <b>FastAPI</b> server with a plain HTML/JavaScript page, started with <code>make serve</code> and opened at <code>http://127.0.0.1:8000</code>. It has no database: documents stay in memory, and repeated analyses of the same text come from a small cache. A Dockerfile packages it for hosting.</p>
+  </section>
+
+  <section class="stage">
+    <div class="stage-title"><span class="n">13</span><h3>Limitations</h3></div>
+    <ul>
+      <li>English, text-based PDFs only. Scanned PDFs would need OCR.</li>
+      <li>Only the risk types in the three datasets are detected. A risky clause of a type that was never labelled will not be flagged.</li>
+      <li>Contract detection catches about 6 in 10 risky sentences, so a contract review still needs a careful human read.</li>
+      <li>The datasets are US/EU-centric and a few years old; newer drafting styles may score lower.</li>
+      <li>ClauseGuard points at clauses worth reading. It is not legal advice.</li>
+    </ul>
+  </section>
+</div>
+
+<!-- ============ SUMMARY ============ -->
+<div class="part">
+  <div class="part-head">
+    <p class="kicker">Part four</p>
+    <h2>Summary of everything</h2>
+    <p>The whole system on one page.</p>
+  </div>
+  <h3 style="margin-top:0">What it does</h3>
+  <p>ClauseGuard takes a terms of service, privacy policy or contract, finds the clauses that could work against you, scores the document from 0 to 100 against typical documents of its kind, and explains each flagged clause in plain English.</p>
+
+  <h3>How a document is analysed</h3>
+  <ol class="final">
+    <li><b>Read:</b> pdfplumber extracts the text and removes repeated headers, footers and page numbers. The length (50–150k words) and language (English) are checked.</li>
+    <li><b>Clean:</b> characters are normalised and broken lines rejoined into sentences. A text map keeps every character linked to the original.</li>
+    <li><b>Split:</b> spaCy plus legal rules produce sentences (ToS, contracts); paragraphs of 12–180 words are built for privacy. Headings are skipped.</li>
+    <li><b>Classify:</b> each unit gets a probability for every label from a fine-tuned transformer (ONNX, CPU). A label is flagged above its own tuned threshold.</li>
+    <li><b>Score:</b> flags become findings with severities. Score = 100 × (1 − e<sup>−Σ w·p / k</sup>), where k is calibrated so a typical document scores 50.</li>
+    <li><b>Explain:</b> plain-English templates by default, Claude optionally. Results appear as highlights and cards with a feedback button on each.</li>
+  </ol>
+
+  <h3>How the models were made</h3>
+  <ul class="final">
+    <li><b>Data:</b> UNFAIR-ToS (50 ToS), OPP-115 (115 policies, 2-of-3 vote) and CUAD (510 contracts, spans mapped to sentences, 4:1 negative sampling), all split by whole document.</li>
+    <li><b>Models:</b> majority → TF-IDF + logistic regression → DistilBERT → LEGAL-BERT / PrivBERT. The domain-pre-trained models won.</li>
+    <li><b>Training:</b> on a Kaggle GPU with weighted BCE, mixed precision, early stopping and 3 seeds. Thresholds were tuned on validation; the test set was used once.</li>
+    <li><b>Results (test macro F1):</b> ToS 0.76, Privacy 0.78, Contract 0.59. Document-level F1 is 0.82–0.96.</li>
+    <li><b>Serving:</b> ONNX full precision (INT8 lost too much accuracy) in a FastAPI app, with no database and nothing stored.</li>
+  </ul>
+
+  <h3>Key ideas worth remembering</h3>
+  <table>
+    <tr><th style="width:32%">Idea</th><th>Why it matters</th></tr>
+    <tr><td>One module per document type</td><td>Each type has its own risks and its own labelled unit. The user picks the type, so there is no router to get it wrong.</td></tr>
+    <tr><td>Units match the training data</td><td>The model is only reliable on the kind of text it learned from: sentences or paragraphs, and the same text style.</td></tr>
+    <tr><td>Text map</td><td>Cleaning changes the text, but the highlights still land on the right original words.</td></tr>
+    <tr><td>Multi-label + per-label thresholds</td><td>One clause can carry several risks, and rare labels need their own cut-off.</td></tr>
+    <tr><td>Split by document, test once</td><td>Prevents leakage and over-tuning, so the reported numbers are honest.</td></tr>
+    <tr><td>Calibrated score</td><td>“50” means “as risky as a typical document of this type”, not an arbitrary number.</td></tr>
+  </table>
+</div>
+
+</body>
+</html>

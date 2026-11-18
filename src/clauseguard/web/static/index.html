@@ -9,8 +9,11 @@
 <body>
   <header class="top">
     <div class="wrap">
-      <h1 class="brand">ClauseGuard</h1>
-      <p class="tagline">Find the clauses that could work against you before you sign or click “I agree”.</p>
+      <div>
+        <h1 class="brand">Clause<span>Guard</span></h1>
+        <p class="tagline">Find the clauses that could work against you before you sign or click “I agree”.</p>
+      </div>
+      <p class="scope">Terms of service · Privacy policies · Contracts</p>
     </div>
   </header>
 
@@ -20,6 +23,7 @@
       <div id="types" class="types" role="radiogroup" aria-labelledby="step-type-title">
         <p class="muted">Loading…</p>
       </div>
+      <p id="detect-hint" class="detect-hint" role="status" aria-live="polite">Add the document below and ClauseGuard will suggest its type. You can always change it.</p>
     </section>
 
     <section class="card" aria-labelledby="step-input-title">
@@ -53,7 +57,7 @@
       <div class="card summary">
         <div class="score" id="score"></div>
         <div class="summary-text">
-          <h2 id="results-title">Results</h2>
+          <h2 id="results-title">Risk report</h2>
           <p id="summary-line" class="muted"></p>
           <ul id="warnings" class="warnings"></ul>
         </div>
