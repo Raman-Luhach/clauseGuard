@@ -58,3 +58,24 @@ cuad_pdfs:
       filename: CUAD_v1.zip
       sha256: 88b694d99007d39777fa44cd72daf8297773d285dc3eab0091ba32078888d18e
       extract: true
+
+# Not-legal text for the document-type router's "other" class (unrelated pages, articles).
+ag_news:
+  description: AG News test split (news articles, Hugging Face fancyzhx/ag_news, revision eb185aa); router only
+  license: research and non-commercial use
+  homepage: https://huggingface.co/datasets/fancyzhx/ag_news
+  optional: true
+  files:
+    - url: https://huggingface.co/datasets/fancyzhx/ag_news/resolve/eb185aade064a813bc0b7f42de02595523103ca4/data/test-00000-of-00001.parquet
+      filename: test.parquet
+      sha256: 71de87ec66bc5737752a2502204dfa6d7fe9856ade3ea444dc6317789a4f13fb
+
+wikitext:
+  description: WikiText-2 raw test split (Wikipedia articles, Hugging Face Salesforce/wikitext, revision b08601e); router only
+  license: CC BY-SA 3.0
+  homepage: https://huggingface.co/datasets/Salesforce/wikitext
+  optional: true
+  files:
+    - url: https://huggingface.co/datasets/Salesforce/wikitext/resolve/b08601e04326c79dfdd32d625aee71d232d685c3/wikitext-2-raw-v1/test-00000-of-00001.parquet
+      filename: test.parquet
+      sha256: 5f1bea067869d04849c0f975a2b29c4ff47d867f484f5010ea5e861eab246d91

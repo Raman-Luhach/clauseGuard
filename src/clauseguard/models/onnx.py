@@ -47,23 +47,30 @@ class OnnxModel(MultiLabelModel):
         tokenizer.enable_padding(pad_id=meta["pad_id"], pad_token=meta["pad_token"])
         options = ort.SessionOptions()
         options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        options.log_severity_level = 3  # errors only: INT8 graphs log harmless folding warnings
         session = ort.InferenceSession(
             str(path / meta["files"][variant]), options, providers=["CPUExecutionProvider"]
         )
         return cls(meta["labels"], session, tokenizer, meta["input_names"], variant)
 
-    def predict_proba(self, texts: Sequence[str], batch_size: int = 32) -> np.ndarray:
+    def predict_proba(self, texts: Sequence[str], batch_size: int = 4) -> np.ndarray:
+        """Probabilities per text. Texts are sorted by token count and run in small batches,
+        each cut to its own longest text: on a CPU the work is proportional to the padded
+        tokens, and small, evenly sized batches waste almost none (measured: 2-3x faster
+        than batches of 32 sorted by characters, identical outputs)."""
         if not len(texts):
             return np.zeros((0, len(self.labels)))
-        order = np.argsort([len(t) for t in texts])  # similar lengths -> less padding
+        encodings = self.tokenizer.encode_batch(list(texts))  # right-padded to the longest
+        lengths = np.array([sum(e.attention_mask) for e in encodings])
+        order = np.argsort(lengths, kind="stable")
         out = np.zeros((len(texts), len(self.labels)), dtype=np.float32)
         for start in range(0, len(texts), batch_size):
             idx = order[start : start + batch_size]
-            encodings = self.tokenizer.encode_batch([texts[i] for i in idx])
+            width = int(lengths[idx].max())
             arrays = {
-                "input_ids": [e.ids for e in encodings],
-                "attention_mask": [e.attention_mask for e in encodings],
-                "token_type_ids": [e.type_ids for e in encodings],
+                "input_ids": [encodings[i].ids[:width] for i in idx],
+                "attention_mask": [encodings[i].attention_mask[:width] for i in idx],
+                "token_type_ids": [encodings[i].type_ids[:width] for i in idx],
             }
             feeds = {name: np.asarray(arrays[name], dtype=np.int64) for name in self.input_names}
             logits = self.session.run(None, feeds)[0]
@@ -127,6 +134,23 @@ def quantize_int8(fp32: Path, int8: Path) -> None:
     )
 
 
+def optimize_graph(src: Path, dst: Path, log: Callable[[str], None] = print) -> bool:
+    """ONNX Runtime's transformer optimizer: fuses LayerNorm + residual (SkipLayerNorm),
+    bias + GELU and, where it recognises the pattern, attention. Same weights, same precision,
+    fewer operations on the CPU. Returns False (and writes nothing) when it fails."""
+    try:
+        from onnxruntime.transformers.optimizer import optimize_model
+
+        model = optimize_model(str(src), model_type="bert", num_heads=0, hidden_size=0, opt_level=1)
+        model.save_model_to_file(str(dst))
+    except Exception as exc:  # unknown architecture pattern, old onnxruntime, ...
+        log(f"graph optimisation skipped: {exc}")
+        return False
+    fused = {k: v for k, v in model.get_fused_operator_statistics().items() if v}
+    log(f"optimised graph -> {dst.name} (fused: {fused})")
+    return True
+
+
 def export_onnx(
     run_path: Path, *, quantize: bool = True, log: Callable[[str], None] = print
 ) -> dict:
@@ -156,7 +180,17 @@ def export_onnx(
     out.mkdir(parents=True, exist_ok=True)
     exporter = _export_graph(Logits(hf).eval(), sample, names, out / "model.onnx")
     hf.eval()  # the TorchScript exporter restores the module's previous training flag
+    # The exporter drops inputs the model ignores (DeBERTa-v3 has no token types): feed only
+    # what the graph declares.
+    import onnx
+
+    graph_inputs = {
+        i.name for i in onnx.load(str(out / "model.onnx"), load_external_data=False).graph.input
+    }
+    names = [name for name in names if name in graph_inputs]
     files = {"fp32": "model.onnx"}
+    if optimize_graph(out / "model.onnx", out / "model.opt.onnx", log=log):
+        files["fp32-opt"] = "model.opt.onnx"
     if quantize and exporter == "torchscript":
         quantize_int8(out / "model.onnx", out / "model.int8.onnx")
         files["int8"] = "model.int8.onnx"
@@ -188,7 +222,8 @@ def compare_backends(
     *,
     log: Callable[[str], None] = print,
 ) -> dict:
-    """Macro-F1 and speed of PyTorch vs ONNX variants on the same units; picks what to serve.
+    """Macro-F1 and speed of PyTorch vs ONNX variants on the same units; picks what to serve:
+    the fastest variant within ``MAX_F1_DROP`` of the reference.
 
     At most ``MAX_COMPARE_UNITS`` units are used (a fixed random sample): enough to measure
     the F1 change, without running three models over 14k contract sentences on a CPU."""
@@ -201,17 +236,25 @@ def compare_backends(
         )
         texts, y = [texts[i] for i in keep], y[keep]
 
-    candidates: dict[str, Callable[[], MultiLabelModel]] = {
-        "torch": lambda: TransformerModel.load(run_path / "model", device="cpu"),
-    }
+    # The reference is PyTorch when the run still has its weights, else the fp32 ONNX graph
+    # (runs copied back from a GPU machine keep only ONNX).
+    candidates: dict[str, Callable[[], MultiLabelModel]] = {}
+    if (run_path / "model" / "kind.json").exists():
+        candidates["torch"] = lambda: TransformerModel.load(run_path / "model", device="cpu")
     meta = json.loads((run_path / EXPORT_DIR / "onnx.json").read_text())
     for variant in meta["files"]:
         candidates[f"onnx-{variant}"] = lambda v=variant: OnnxModel.load(run_path / EXPORT_DIR, v)
     results, reference = {}, None
     for name, factory in candidates.items():
-        model = factory()
-        started = time.perf_counter()
-        p = model.predict_proba(texts)
+        try:
+            model = factory()
+            started = time.perf_counter()  # prediction time only, not loading
+            p = model.predict_proba(texts)
+        except Exception as exc:  # e.g. a fused graph this onnxruntime can't run: skip it
+            if name in ("torch", "onnx-fp32"):
+                raise
+            log(f"{name:10s} skipped: {exc}")
+            continue
         seconds = time.perf_counter() - started
         metrics = compute_metrics(y, p, thresholds, label_ids)
         reference = p if reference is None else reference
@@ -219,15 +262,20 @@ def compare_backends(
             "macro_f1": metrics["macro_f1"],
             "micro_f1": metrics["micro"]["f1"],
             "ms_per_unit": round(1000 * seconds / max(len(texts), 1), 2),
-            "max_prob_diff_vs_torch": float(np.abs(p - reference).max()) if len(p) else 0.0,
+            "max_prob_diff_vs_reference": float(np.abs(p - reference).max()) if len(p) else 0.0,
         }
         log(
             f"{name:10s} macro-F1 {metrics['macro_f1']:.4f}  {results[name]['ms_per_unit']} ms/unit"
         )
-    serve = "fp32"
-    if "onnx-int8" in results:
-        drop = results["torch"]["macro_f1"] - results["onnx-int8"]["macro_f1"]
-        serve = "int8" if drop <= MAX_F1_DROP else "fp32"
+    # Serve the fastest variant that costs at most MAX_F1_DROP macro-F1 (fp32 always qualifies).
+    reference_f1 = next(iter(results.values()))["macro_f1"]
+    allowed = [
+        name.removeprefix("onnx-")
+        for name, r in results.items()
+        if name.startswith("onnx-")
+        and (name == "onnx-fp32" or reference_f1 - r["macro_f1"] <= MAX_F1_DROP)
+    ]
+    serve = min(allowed, key=lambda v: results[f"onnx-{v}"]["ms_per_unit"])
     meta["serve"] = serve
     (run_path / EXPORT_DIR / "onnx.json").write_text(json.dumps(meta, indent=2))
     report = {"n_units": len(texts), "results": results, "serve": serve, "max_f1_drop": MAX_F1_DROP}

@@ -68,6 +68,34 @@ models:
     epochs: 15
     batch_size: 16
     patience: 3
+  # Second GPU session (Lambda): rare labels (Do Not Track has 22 training segments) repeated
+  # up to 4x, and DeBERTa-v3 as a challenger.
+  privbert-os:
+    type: transformer
+    checkpoint: mukund/privbert
+    lr: 2.0e-5
+    epochs: 15
+    batch_size: 16
+    patience: 3
+    oversample: {min_positives: 150, max_factor: 4}
+  deberta:
+    type: transformer
+    checkpoint: microsoft/deberta-v3-base
+    lr: 2.0e-5
+    epochs: 15
+    batch_size: 16
+    patience: 3
+  deberta-os:
+    type: transformer
+    checkpoint: microsoft/deberta-v3-base
+    lr: 2.0e-5
+    epochs: 15
+    batch_size: 16
+    patience: 3
+    oversample: {min_positives: 150, max_factor: 4}
+
+# The GPU session trains these; the earlier ones are already trained (PrivBERT is served).
+gpu_candidates: [privbert-os, deberta, deberta-os]
 
 smoke: {n_train: 120, n_eval: 60, epochs: 1, max_length: 128, batch_size: 8}
 

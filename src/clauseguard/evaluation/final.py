@@ -90,10 +90,16 @@ def final_report(
             )
             to_test = [m for m in by_model if by_model[m][0]["model_type"] != "transformer"]
             to_test += [best_model] if best_model else []
+            served = next((r["model"] for r in runs if r["run_id"] == selected), None)
+            if served and served not in to_test:  # the served model is always reported
+                to_test.append(served)
             test: dict[str, dict[str, list[float]]] = {}
             for model in to_test:
                 for run in by_model[model]:
-                    metrics, _ = evaluate_run(module, run["run_id"], "test", final=True)
+                    if run["metrics_test"] is not None:  # evaluated once already: reuse it
+                        metrics = run["metrics_test"]
+                    else:
+                        metrics, _ = evaluate_run(module, run["run_id"], "test", final=True)
                     log(f"{module} {run['run_id']}: test macro-F1 {metrics['macro_f1']:.3f}")
                     for name, path in TEST_METRICS.items():
                         test.setdefault(model, {}).setdefault(name, []).append(_get(metrics, path))

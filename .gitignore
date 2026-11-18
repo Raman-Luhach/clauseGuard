@@ -22,3 +22,6 @@ logs/
 
 # Kaggle result archives
 *.tgz
+
+# Extension package (make extension)
+dist/

@@ -29,6 +29,7 @@ train = [
     "transformers>=4.45",
     "onnx>=1.17",
     "onnxscript>=0.2",
+    "sentencepiece>=0.2",
 ]
 # Serving: API + web UI + ONNX inference. Deliberately no torch, so the deployed image is small.
 serve = [

@@ -37,3 +37,24 @@ test("summary line", () => {
     findings: [{}, {}] });
   assert.equal(line, "Contract · 12,345 words · 1 page · 2 flagged clauses");
 });
+
+const { detectionHint } = require("../../src/clauseguard/web/static/app.js");
+const names = { tos: "Terms of Service", privacy: "Privacy Policy", contract: "Contract" };
+
+test("a confident detection pre-selects its type", () => {
+  const hint = detectionHint({ document_type: "privacy", confidence: 0.91, confident: true,
+    unrelated: false, probabilities: { privacy: 0.91, tos: 0.05 } }, names);
+  assert.equal(hint.select, "privacy");
+  assert.match(hint.text, /Privacy Policy \(91% sure\)/);
+});
+
+test("an unsure or unrelated detection selects nothing", () => {
+  const unsure = detectionHint({ document_type: null, confidence: 0.5, confident: false,
+    unrelated: false, probabilities: { tos: 0.5, privacy: 0.45, other: 0.05 } }, names);
+  assert.equal(unsure.select, null);
+  assert.match(unsure.text, /might be a Terms of Service \(50%\)/);
+  const unrelated = detectionHint({ document_type: null, confidence: 0.9, confident: false,
+    unrelated: true, probabilities: { other: 0.9 } }, names);
+  assert.equal(unrelated.select, null);
+  assert.match(unrelated.text, /doesn't look like/);
+});

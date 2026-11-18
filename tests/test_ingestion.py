@@ -172,7 +172,14 @@ def test_zip_extraction_skips_macos_junk_and_blocks_path_escape(home, tmp_path, 
 
 def test_resolve_targets_expands_groups():
     assert dl.resolve_targets(["tos"]) == ["unfair_tos", "claudette"]
-    assert dl.resolve_targets(["all", "cuad"]) == ["unfair_tos", "claudette", "opp115", "cuad"]
+    assert dl.resolve_targets(["all", "cuad"]) == [
+        "unfair_tos",
+        "claudette",
+        "opp115",
+        "cuad",
+        "ag_news",
+        "wikitext",
+    ]
     with pytest.raises(ValueError, match="unknown dataset"):
         dl.resolve_targets(["nope"])
 

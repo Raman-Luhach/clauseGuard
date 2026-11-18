@@ -43,3 +43,48 @@ def tune_thresholds(y: np.ndarray, p: np.ndarray, objective: str = "f1") -> list
 
 def apply_thresholds(p: np.ndarray, thresholds: list[float]) -> np.ndarray:
     return (p >= np.asarray(thresholds)[None, :]).astype(np.int8)
+
+
+THRESHOLD_BETAS = (1.0, 1.25, 1.5, 2.0, 2.5, 3.0, 4.0)
+
+
+def any_risk(
+    y: np.ndarray, p: np.ndarray, thresholds: list[float], risky: list[bool]
+) -> tuple[float, float]:
+    """(recall, precision) of "the unit has some risky label", over the ``risky`` labels."""
+    idx = [j for j, r in enumerate(risky) if r]
+    gold = y[:, idx].any(axis=1)
+    pred = apply_thresholds(p[:, idx], [thresholds[j] for j in idx]).any(axis=1)
+    hits = float((pred & gold).sum())
+    recall = hits / gold.sum() if gold.any() else float("nan")
+    precision = hits / pred.sum() if pred.any() else 0.0
+    return float(recall), float(precision)
+
+
+def tune_for_recall(
+    y: np.ndarray,
+    p: np.ndarray,
+    risky: list[bool],
+    target: float,
+    min_precision: float | None = None,
+) -> tuple[list[float], float, list[dict]]:
+    """Per-label F-beta thresholds with the smallest beta whose any-risk recall reaches
+    ``target``.
+
+    A larger beta weighs recall more than precision. Betas are tried in increasing order; the
+    search stops at the first one reaching the target, and never accepts a beta whose any-risk
+    precision falls below ``min_precision`` (the previous beta is kept instead). Returns
+    (thresholds, beta, one row per beta tried) so the choice can be reported.
+    """
+    tried, chosen = [], None
+    for beta in THRESHOLD_BETAS:
+        thresholds = [best_threshold(y[:, j], p[:, j], beta)[0] for j in range(y.shape[1])]
+        recall, precision = any_risk(y, p, thresholds, risky)
+        tried.append({"beta": beta, "any_recall": recall, "any_precision": precision})
+        if min_precision is not None and precision < min_precision and chosen is not None:
+            break
+        chosen = (thresholds, beta)
+        if recall >= target:
+            break
+    assert chosen is not None
+    return chosen[0], chosen[1], tried

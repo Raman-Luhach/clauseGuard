@@ -3,7 +3,8 @@
 The output mirrors ``artifacts/`` (``runs/<module>/<run_id>/`` plus ``selected.json``) so the
 app finds it when ``CLAUSEGUARD_HOME`` points at the folder's parent. Transformer runs must
 have an ONNX export; their PyTorch weights are left out, so the app runs without torch.
-Predictions and error tables are left out too.
+Predictions and error tables are left out too. The document-type router, when trained, is
+copied to ``router/``.
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from clauseguard.models.runs import read_json, resolve_run
 
 KEEP_FILES = (
     "DONE",
+    "screening.json",
     "meta.json",
     "thresholds.json",
     "metrics_validation.json",
@@ -43,6 +45,8 @@ def package_models(out: Path, modules: list[str], log: Callable[[str], None] = p
         for name in KEEP_FILES:
             if (run / name).exists():
                 shutil.copy2(run / name, target / name)
+        if (run / "screening.json").exists() and (run / "screen").exists():
+            shutil.copytree(run / "screen", target / "screen")  # the TF-IDF screening model
         if has_onnx:
             onnx = json.loads((run / "onnx" / "onnx.json").read_text())
             (target / "onnx").mkdir()
@@ -55,5 +59,14 @@ def package_models(out: Path, modules: list[str], log: Callable[[str], None] = p
         (out / "runs" / module / "selected.json").write_text(json.dumps({"run_id": run.name}))
         size = sum(f.stat().st_size for f in target.rglob("*") if f.is_file()) / 1e6
         log(f"{module}: {run.name} ({model_type}{', onnx' if has_onnx else ''}, {size:.0f} MB)")
+        packaged.append(target)
+    from clauseguard.router import router_dir
+
+    if (router_dir() / "model.joblib").exists():
+        target = out / "router"
+        if target.exists():
+            shutil.rmtree(target)
+        shutil.copytree(router_dir(), target)
+        log(f"router: {(target / 'model.joblib').stat().st_size / 1e6:.0f} MB")
         packaged.append(target)
     return packaged

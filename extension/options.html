@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClauseGuard settings</title>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body class="page">
+  <h1>Clause<span>Guard</span> settings</h1>
+  <div class="card">
+    <label for="api" class="field-label">ClauseGuard server</label>
+    <input type="url" id="api" placeholder="http://127.0.0.1:8000" spellcheck="false">
+    <p class="hint">The address of a running ClauseGuard app: <code>http://127.0.0.1:8000</code> after
+      <code>make serve</code> on your computer, or your Hugging Face Space, such as
+      <code>https://your-name-clauseguard.hf.space</code>.</p>
+    <div class="row">
+      <button type="button" id="save" class="primary">Save</button>
+      <button type="button" id="test" class="secondary">Test connection</button>
+    </div>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+  </div>
+  <div class="card">
+    <h2>Privacy</h2>
+    <p>ClauseGuard reads a page only when you click its button or use the right-click menu.
+      The text is sent to the server above for analysis and is not stored there; only counts
+      and timings are logged. Nothing is sent anywhere else.</p>
+  </div>
+  <script src="lib/core.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

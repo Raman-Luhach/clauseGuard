@@ -78,9 +78,16 @@ def test_tokenizer_matches_hugging_face(exported):
 
 def test_compare_picks_a_variant_and_serving_prefers_onnx(exported, monkeypatch):
     report = compare_backends(exported, TEXTS, Y, [0.5, 0.5], ["a", "b"], log=lambda *_: None)
-    assert set(report["results"]) == {"torch", "onnx-fp32", "onnx-int8"}
-    assert report["results"]["onnx-fp32"]["max_prob_diff_vs_torch"] < 1e-4
-    assert report["serve"] in ("int8", "fp32")
+    assert {"torch", "onnx-fp32", "onnx-int8"} <= set(report["results"])
+    assert report["results"]["onnx-fp32"]["max_prob_diff_vs_reference"] < 1e-4
+    if "onnx-fp32-opt" in report["results"]:  # the optimised graph keeps fp32 accuracy
+        assert report["results"]["onnx-fp32-opt"]["max_prob_diff_vs_reference"] < 1e-3
+    assert report["serve"] in ("int8", "fp32", "fp32-opt")
+    fastest = min(
+        (v for v in ("fp32", "fp32-opt", "int8") if f"onnx-{v}" in report["results"]),
+        key=lambda v: report["results"][f"onnx-{v}"]["ms_per_unit"],
+    )
+    assert report["serve"] in (fastest, "fp32")  # fastest, unless it costs too much F1
     assert serving_model_dir(exported) == exported / "onnx"
     assert serving_model_dir(exported, "torch") == exported / "model"
     monkeypatch.setenv("CLAUSEGUARD_BACKEND", "onnx")

@@ -1,16 +1,21 @@
 #!/usr/bin/env bash
-# Train ClauseGuard's transformer models on a Linux GPU machine (Kaggle, Colab, a server) and
-# write one results archive. Run from anywhere inside the repository:
+# Train ClauseGuard's transformer models on a Linux GPU machine (Lambda, Kaggle, Colab, a
+# server) and write one results archive. Run from anywhere inside the repository:
 #
-#   MODULES="tos privacy" OUT=/kaggle/working bash scripts/train_on_gpu.sh
-#   MODULES="contract"    OUT=/kaggle/working bash scripts/train_on_gpu.sh
+#   OUT=~ bash scripts/train_on_gpu.sh                      # everything (Lambda H100: ~4-5 h)
+#   MODULES="contract" JOINT=0 OUT=~ bash scripts/train_on_gpu.sh
 #
-# MODULES  modules to train in this run (default: all three)
+# MODULES  modules to train in this run (default: all three); each trains the models listed
+#          under gpu_candidates in configs/<module>.yaml
+# JOINT    1 (default): also train the joint model over all three modules; 0: skip it
 # OUT      where the results archive goes (default: current directory)
 # SCRATCH  large downloads: virtual environment, caches (default: /tmp/clauseguard-cache)
+#
+# Back on the Mac: clauseguard results import <archive>, then make after-import.
 set -euo pipefail
 
 MODULES="${MODULES:-tos privacy contract}"
+JOINT="${JOINT:-1}"
 OUT="${OUT:-$PWD}"
 SCRATCH="${SCRATCH:-/tmp/clauseguard-cache}"
 TAG="$(echo "$MODULES" | tr ' ' '-')"
@@ -37,18 +42,18 @@ step "quick tests"
 make test-fast
 step "the whole session in miniature (CPU): $MODULES"
 make train-gpu-smoke MODULES="$MODULES"
+if [ "$JOINT" = "1" ]; then uv run clauseguard joint train --smoke; fi
 
 step "training: $MODULES"
 make train-gpu MODULES="$MODULES"
 step "test results, ONNX export, robustness, latency, packaging: $MODULES"
 make after-gpu MODULES="$MODULES"
+if [ "$JOINT" = "1" ]; then
+  step "the joint model (all three modules, one encoder)"
+  uv run clauseguard joint train --final
+fi
 
 step "writing the results archive"
-for name in final_results.md final_results.json gpu_session.json; do
-  cp "reports/generated/$name" "reports/generated/${name%.*}_${TAG}.${name##*.}"
-done
-cp experiments/log.csv "experiments/log_${TAG}.csv"
-mkdir -p "$OUT"
-tar czf "$OUT/clauseguard-results-${TAG}.tgz" \
-  deploy/models reports/generated "experiments/log_${TAG}.csv" data/data_cards
-step "done: $OUT/clauseguard-results-${TAG}.tgz ($(du -h "$OUT/clauseguard-results-${TAG}.tgz" | cut -f1))"
+ARCHIVE="$OUT/clauseguard-results-${TAG}.tgz"
+uv run clauseguard results pack "$ARCHIVE" $(for m in $MODULES; do echo --module "$m"; done)
+step "done: $ARCHIVE ($(du -h "$ARCHIVE" | cut -f1))"

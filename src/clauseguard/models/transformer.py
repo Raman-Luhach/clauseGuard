@@ -42,9 +42,12 @@ def set_seed(seed: int) -> None:
     torch.cuda.manual_seed_all(seed)
 
 
-def pos_weights(y: np.ndarray, spec: PosWeightSpec) -> torch.Tensor:
-    pos = y.sum(axis=0).astype(float)
-    neg = len(y) - pos
+def pos_weights(y: np.ndarray, spec: PosWeightSpec, mask: np.ndarray | None = None) -> torch.Tensor:
+    """Positive-class weights from label frequencies; with ``mask``, only the units where a
+    label is annotated count for it."""
+    known = np.ones_like(y) if mask is None else mask
+    pos = (y * known).sum(axis=0).astype(float)
+    neg = known.sum(axis=0) - pos
     ratio = np.divide(neg, pos, out=np.ones_like(pos), where=pos > 0)
     weights = {"none": np.ones_like(ratio), "sqrt": np.sqrt(ratio), "linear": ratio}[spec.mode]
     return torch.tensor(np.clip(weights, 1.0, spec.max), dtype=torch.float32)
@@ -77,8 +80,10 @@ class TransformerModel(MultiLabelModel):
         try:
             # A checkpoint that already has a classification head of another size gets a fresh
             # head; every other weight still has to match.
+            # Always float32 weights: some checkpoints (DeBERTa-v3) are stored in float16 and
+            # would otherwise load (and train) in float16. Mixed precision comes from autocast.
             model = AutoModelForSequenceClassification.from_pretrained(
-                checkpoint, config=config, ignore_mismatched_sizes=True
+                checkpoint, config=config, ignore_mismatched_sizes=True, dtype=torch.float32
             )
         finally:
             hf_logging.set_verbosity(previous)
@@ -118,7 +123,7 @@ class TransformerModel(MultiLabelModel):
         meta = json.loads((path / "kind.json").read_text())
         max_length = json.loads((path / "transformer.json").read_text())["max_length"]
         tokenizer = AutoTokenizer.from_pretrained(path / "hf")
-        model = AutoModelForSequenceClassification.from_pretrained(path / "hf")
+        model = AutoModelForSequenceClassification.from_pretrained(path / "hf", dtype=torch.float32)
         return cls(meta["labels"], tokenizer, model, max_length, pick_device(device))
 
 
@@ -146,8 +151,16 @@ def train_transformer(
     device: str = "auto",
     epochs: int | None = None,
     batch_size: int | None = None,
+    loss_mask: np.ndarray | None = None,
+    val_score: Callable[[np.ndarray], float] | None = None,
     log: Callable[[str], None] = print,
 ) -> tuple[TransformerModel, dict]:
+    """Fine-tune ``spec.checkpoint`` and return the best epoch's model.
+
+    ``loss_mask`` (same shape as ``y``, 1 = annotated) leaves labels out of the loss for units
+    whose dataset does not annotate them (the joint model). ``val_score`` replaces validation
+    macro PR-AUC as the early-stopping score.
+    """
     set_seed(seed)
     dev = pick_device(device)
     epochs = epochs or spec.epochs
@@ -159,10 +172,15 @@ def train_transformer(
     encoded = tokenizer(list(texts), truncation=True, max_length=max_length)
     features = [{k: encoded[k][i] for k in encoded} for i in range(len(texts))]
     targets = torch.tensor(y, dtype=torch.float32)
+    weights = torch.tensor(np.ones_like(y) if loss_mask is None else loss_mask, dtype=torch.float32)
 
     def collate(indices: list[int]):
         batch = tokenizer.pad([features[i] for i in indices], return_tensors="pt")
-        return {k: v.to(dev) for k, v in batch.items()}, targets[indices].to(dev)
+        return (
+            {k: v.to(dev) for k, v in batch.items()},
+            targets[indices].to(dev),
+            weights[indices].to(dev),
+        )
 
     generator = torch.Generator().manual_seed(seed)
     loader = DataLoader(
@@ -190,7 +208,9 @@ def train_transformer(
     scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer, _linear_schedule(int(spec.warmup_ratio * total_steps), total_steps)
     )
-    loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weights(y, pos_weight).to(dev))
+    loss_fn = torch.nn.BCEWithLogitsLoss(
+        pos_weight=pos_weights(y, pos_weight, loss_mask).to(dev), reduction="none"
+    )
 
     use_amp = dev.type == "cuda"
     amp_dtype = torch.bfloat16 if use_amp and torch.cuda.is_bf16_supported() else torch.float16
@@ -204,10 +224,11 @@ def train_transformer(
         model.train()
         epoch_start, running, n_batches = time.time(), 0.0, 0
         optimizer.zero_grad(set_to_none=True)
-        for step, (inputs, batch_y) in enumerate(loader, start=1):
+        for step, (inputs, batch_y, batch_w) in enumerate(loader, start=1):
             with torch.autocast(device_type=dev.type, dtype=amp_dtype, enabled=use_amp):
                 logits = model(**inputs).logits
-            loss = loss_fn(logits.float(), batch_y)
+            # mean over the annotated (unit, label) pairs; without a mask, over all of them
+            loss = (loss_fn(logits.float(), batch_y) * batch_w).sum() / batch_w.sum().clamp(min=1)
             scaler.scale(loss / spec.grad_accum).backward()
             if step % spec.grad_accum == 0 or step == len(loader):
                 scaler.unscale_(optimizer)
@@ -220,7 +241,7 @@ def train_transformer(
             n_batches += 1
 
         val_p = wrapper.predict_proba(val_texts)
-        score = macro_pr_auc(val_y, val_p)
+        score = val_score(val_p) if val_score is not None else macro_pr_auc(val_y, val_p)
         record = {
             "epoch": epoch,
             "train_loss": running / max(1, n_batches),

@@ -22,6 +22,7 @@ GROUPS = {
     "tos": ["unfair_tos", "claudette"],
     "privacy": ["opp115"],
     "contract": ["cuad"],
+    "router": ["claudette", "ag_news", "wikitext"],  # plus the three datasets above
 }
 GROUPS["all"] = [name for names in GROUPS.values() for name in names]
 _USER_AGENT = "clauseguard/0.1 (academic research project)"

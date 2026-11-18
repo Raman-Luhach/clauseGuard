@@ -62,5 +62,18 @@ class AnalysisResult(BaseModel):
     timings_ms: dict[str, float] = Field(default_factory=dict)
     # For monitoring: units classified, flags per label (before merging), borderline flags
     diagnostics: dict = Field(default_factory=dict)
+    # The document-type router's view of the text (None when no router is installed);
+    # when the type was not given, the analysed type came from here.
+    detection: dict | None = None
+    type_source: Literal["user", "router"] = "user"
     text: str  # the cleaned document text that the offsets refer to
+    disclaimer: str = DISCLAIMER
+
+
+class CombinedResult(BaseModel):
+    """Several analyzers run on the same document (e.g. a page with terms and a privacy
+    policy); each result is complete on its own."""
+
+    results: list[AnalysisResult]
+    detection: dict | None = None
     disclaimer: str = DISCLAIMER

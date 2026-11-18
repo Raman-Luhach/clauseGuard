@@ -1,7 +1,8 @@
 """The GPU training session: every transformer for every module, resumable.
 
 For each module:
-1. train each transformer in configs/<module>.yaml with the first seed;
+1. train each candidate transformer (``gpu_candidates`` in configs/<module>.yaml, default:
+   every transformer) with the first seed;
 2. the best one on validation (selection_metric) is the winner;
 3. train the winner with the remaining seeds (results are reported as mean ± std);
 4. select the best run on validation, unless the TF-IDF baseline beats it, for serving.
@@ -78,7 +79,7 @@ def gpu_session(
     for module in modules:
         cfg = load_module_config(module)
         metric = cfg.selection_metric
-        transformers = [name for name, spec in cfg.models.items() if spec.type == "transformer"]
+        transformers = cfg.session_models()
         if not transformers:
             raise ValueError(f"{module} has no transformer models configured")
         first, *others = cfg.seeds

@@ -47,8 +47,27 @@ function summaryLine(result) {
   return parts.join(" · ");
 }
 
+/** The hint shown under the type choice for a /detect answer, and the type to pre-select
+ *  (null when the router is unsure or the text looks unrelated). `names` maps id -> name. */
+function detectionHint(d, names) {
+  if (!d) return { text: "", select: null };
+  if (d.unrelated) {
+    return { text: "This doesn't look like a terms of service, a privacy policy or a contract. "
+      + "If it is one, choose its type above.", select: null };
+  }
+  if (!d.confident || !names[d.document_type]) {
+    const guess = Object.entries(d.probabilities || {})
+      .filter(([k]) => names[k]).sort((a, b) => b[1] - a[1])[0];
+    const maybe = guess ? ` It might be a ${names[guess[0]]} (${Math.round(guess[1] * 100)}%).` : "";
+    return { text: `ClauseGuard isn't sure what kind of document this is.${maybe} Please choose.`,
+      select: null };
+  }
+  return { text: `Looks like a ${names[d.document_type]} (${Math.round(d.confidence * 100)}% sure).`,
+    select: d.document_type };
+}
+
 if (typeof module !== "undefined") {
-  module.exports = { segments, severityCounts, summaryLine, SEVERITY_ORDER };
+  module.exports = { segments, severityCounts, summaryLine, detectionHint, SEVERITY_ORDER };
 }
 
 /* ---------------------------------------------------------------- page */
@@ -61,7 +80,10 @@ if (typeof document !== "undefined") {
     if (text !== undefined) node.textContent = text;
     return node;
   };
-  const state = { type: null, mode: "file", file: null, result: null, hidden: new Set() };
+  const state = {
+    type: null, mode: "file", file: null, result: null, hidden: new Set(),
+    userChoseType: false, names: {}, models: {}, detectSeq: 0,
+  };
 
   function updateButton() {
     const hasInput = state.mode === "file" ? Boolean(state.file) : $("text").value.trim().length > 0;
@@ -76,6 +98,7 @@ if (typeof document !== "undefined") {
       selectTab("text");
       $("text").value = await response.text();
       setStatus("Example loaded. Press Analyse.");
+      suggestType();
       updateButton();
     } catch (err) {
       setStatus("Could not load the example.", true);
@@ -155,7 +178,10 @@ if (typeof document !== "undefined") {
         const label = el("label", "type" + (t.ready ? "" : " disabled"));
         const input = el("input");
         Object.assign(input, { type: "radio", name: "doctype", value: t.id, disabled: !t.ready });
-        input.addEventListener("change", () => { state.type = t.id; state.model = t.model; updateButton(); });
+        input.addEventListener("change", () => {
+          state.type = t.id; state.model = t.model; state.userChoseType = true; updateButton();
+        });
+        if (t.ready) { state.names[t.id] = t.name; state.models[t.id] = t.model; }
         label.append(input, el("strong", null, t.name),
           el("small", null, t.ready ? t.description : "Not available yet: no trained model."));
         if (t.ready && t.model) label.append(el("span", "model", `Model: ${t.model}`));
@@ -164,6 +190,47 @@ if (typeof document !== "undefined") {
     } catch (err) {
       box.replaceChildren(el("p", "muted", "Could not reach the server."));
     }
+  }
+
+  /* ---- document-type suggestion: pre-select the router's guess unless the user chose ---- */
+  function setType(id) {
+    const input = document.querySelector(`input[name="doctype"][value="${id}"]`);
+    if (!input || input.disabled) return;
+    input.checked = true;
+    state.type = id;
+    state.model = state.models[id];
+    updateButton();
+  }
+
+  async function suggestType() {
+    const form = new FormData();
+    if (state.mode === "file") {
+      if (!state.file) return;
+      form.append("file", state.file);
+    } else {
+      const text = $("text").value;
+      if (text.trim().split(/\s+/).length < 50) return;  // too short to judge
+      form.append("text", text);
+    }
+    const seq = ++state.detectSeq;
+    try {
+      const response = await fetch("/detect", { method: "POST", body: form });
+      if (!response.ok || seq !== state.detectSeq) return;  // no router, or a newer request
+      const hint = detectionHint(await response.json(), state.names);
+      if (hint.select && !state.userChoseType) {
+        setType(hint.select);
+        hint.text += " Selected for you; change it if that's wrong.";
+      } else if (hint.select && state.type !== hint.select) {
+        hint.text += ` You chose ${state.names[state.type] || "another type"}.`;
+      }
+      $("detect-hint").textContent = hint.text;
+    } catch (err) { /* detection is optional */ }
+  }
+
+  let suggestTimer = null;
+  function suggestSoon() {
+    clearTimeout(suggestTimer);
+    suggestTimer = setTimeout(suggestType, 600);
   }
 
   function selectTab(mode) {
@@ -180,6 +247,7 @@ if (typeof document !== "undefined") {
     $("drop-label").textContent = file ? `${file.name} (${Math.round(file.size / 1024)} KB)`
       : "Drop a PDF or text file here, or choose a file";
     updateButton();
+    suggestType();
   }
 
   async function analyze() {
@@ -313,8 +381,8 @@ if (typeof document !== "undefined") {
       const jump = el("button", "link", "Show in document");
       jump.type = "button";
       jump.addEventListener("click", () => focusFinding(i, true));
-      const yes = el("button", "vote", "👍 Agree");
-      const no = el("button", "vote", "👎 Disagree");
+      const yes = el("button", "vote", "Correct");
+      const no = el("button", "vote", "Not correct");
       yes.type = no.type = "button";
       const votes = el("span");
       votes.append(yes, " ", no);
@@ -353,7 +421,7 @@ if (typeof document !== "undefined") {
     $("tab-file").addEventListener("click", () => selectTab("file"));
     $("tab-text").addEventListener("click", () => selectTab("text"));
     $("file").addEventListener("change", (e) => chooseFile(e.target.files[0]));
-    $("text").addEventListener("input", updateButton);
+    $("text").addEventListener("input", () => { updateButton(); suggestSoon(); });
     $("analyze").addEventListener("click", analyze);
     $("example").addEventListener("click", loadExample);
     const drop = $("drop");

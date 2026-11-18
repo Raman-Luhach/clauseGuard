@@ -24,6 +24,14 @@ class LabelSpec(_Strict):
     source: str  # the label's name in the source dataset
 
 
+class OversampleSpec(_Strict):
+    """Training only: repeat the units of rare labels so each label has about ``min_positives``
+    positive units, repeating any unit at most ``max_factor`` times."""
+
+    min_positives: int = 300
+    max_factor: int = 4
+
+
 class ModelSpec(_Strict):
     type: Literal["majority", "tfidf", "transformer"]
     # TF-IDF + logistic regression
@@ -43,6 +51,7 @@ class ModelSpec(_Strict):
     max_length: int | None = None  # defaults to the module's max_length
     # Training only: keep every labelled unit plus this many unlabelled units per labelled one.
     negative_ratio: float | None = None
+    oversample: OversampleSpec | None = None
 
     @model_validator(mode="after")
     def _needs_checkpoint(self) -> ModelSpec:
@@ -82,7 +91,14 @@ class ModuleConfig(_Strict):
     max_length: int
     min_unit_words: int = 3
     threshold_objective: Literal["f1", "f2"] = "f1"
+    # When set, thresholds favour recall: the smallest F-beta (beta from THRESHOLD_BETAS) whose
+    # validation any-risk recall reaches this value. Unset: F1-optimal thresholds.
+    target_any_recall: float | None = None
+    min_any_precision: float | None = None  # ...but never below this any-risk precision
     selection_metric: str = "macro_f1"
+    # Models the GPU session trains (default: every transformer in ``models``). Earlier
+    # candidates stay in ``models`` so their runs keep loading.
+    gpu_candidates: list[str] | None = None
     pos_weight: PosWeightSpec = Field(default_factory=PosWeightSpec)
     risk_score_k: float
     seeds: list[int] = Field(default_factory=lambda: [13, 42, 87])
@@ -117,7 +133,16 @@ class ModuleConfig(_Strict):
         unknown = referenced - set(ids)
         if unknown:
             raise ValueError(f"modifiers/expected_statements use unknown labels: {sorted(unknown)}")
+        for name in self.gpu_candidates or []:
+            if name not in self.models or self.models[name].type != "transformer":
+                raise ValueError(f"gpu_candidates: {name!r} is not a transformer in models")
         return self
+
+    def session_models(self) -> list[str]:
+        """The transformers the GPU session compares."""
+        if self.gpu_candidates is not None:
+            return list(self.gpu_candidates)
+        return [name for name, spec in self.models.items() if spec.type == "transformer"]
 
 
 class RiskGroup(_Strict):

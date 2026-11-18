@@ -33,7 +33,17 @@ def run_benchmark(
     while len(words) < max(SIZES.values()):
         words = words + words
     analyzer.analyze(load_text(" ".join(words[:600])))  # warm-up: loads spaCy and the model
-    report = {"module": module, "run": analyzer.meta["run_id"], "repeats": repeats, "sizes": {}}
+    import os
+    import platform
+
+    report = {
+        "module": module,
+        "run": analyzer.meta["run_id"],
+        "repeats": repeats,
+        "machine": f"{platform.machine()}, {os.cpu_count()} CPU threads, {platform.system()}",
+        "screening": analyzer.screen is not None,
+        "sizes": {},
+    }
     for name, n_words in SIZES.items():
         doc = load_text(" ".join(words[:n_words]))
         timings = [analyzer.analyze(doc).timings_ms for _ in range(repeats)]
@@ -56,7 +66,9 @@ def run_benchmark(
     md = [
         f"# Latency: {module} ({report['run']})",
         "",
-        f"Milliseconds, median / 95th percentile over {repeats} runs, CPU, no cache.",
+        f"Milliseconds, median / 95th percentile over {repeats} runs, CPU, no cache. "
+        f"Machine: {report['machine']}. TF-IDF screening: "
+        f"{'on' if report['screening'] else 'off'}.",
         "",
     ]
     md += md_table(

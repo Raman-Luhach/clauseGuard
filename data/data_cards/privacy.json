@@ -94,9 +94,9 @@
     "max": 372
   },
   "tokens": {
-    "checkpoint": "mukund/privbert",
+    "checkpoint": "microsoft/deberta-v3-base",
     "over_max_length": 0.0,
-    "max": 431
+    "max": 429
   },
   "validation_in_train": 7,
   "test_in_train": 14,
@@ -134,5 +134,5 @@
     "spans_exact": 75401,
     "spans_found_by_search": 2505
   },
-  "sentences": 11105
+  "sentences": 11104
 }

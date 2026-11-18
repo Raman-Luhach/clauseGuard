@@ -6,10 +6,11 @@ from __future__ import annotations
 class InputError(ValueError):
     """The user's input can't be analysed (empty, scanned PDF, wrong language, ...)."""
 
-    def __init__(self, code: str, message: str) -> None:
+    def __init__(self, code: str, message: str, details: dict | None = None) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
+        self.details = details or {}
 
 
 class ModelNotAvailableError(RuntimeError):

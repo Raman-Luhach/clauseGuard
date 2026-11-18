@@ -85,9 +85,19 @@ def _lines(text: str) -> Iterator[tuple[int, int]]:
         yield start, end
 
 
+_REDACTED_START = re.compile(r"^\[?\s*\*")  # "***] per unit", "[*] dollars": redacted text
+_SENTENCE_END = re.compile(r"""[.!?:;]["')\]]*$""")
+
+
 def _should_merge(prev: str, cur: str, doc_has_upper: bool) -> bool:
     prev, cur = prev.rstrip(), cur.lstrip()
     if not cur or cur[0] in ".,;:)]":
+        return True
+    # Redacted contracts ("at least [***] units"): never split inside an open bracket or
+    # before the rest of a redaction marker. These splits left a third of CUAD's errors.
+    if prev.count("[") > prev.count("]") or _REDACTED_START.match(cur):
+        return True
+    if cur[0] == "[" and not _SENTENCE_END.search(prev):  # "shall not exceed [***]."
         return True
     if _MARKER_ONLY.match(prev) or _HARD_ABBREV.search(prev):
         return True

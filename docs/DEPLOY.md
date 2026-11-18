@@ -6,7 +6,7 @@ ONNX). It does not contain PyTorch, so it is small and runs on a free CPU host.
 ## Build and run locally
 
 ```bash
-make package                      # served run of every module -> deploy/models
+make package                      # served run of every module + the router -> deploy/models
 docker build -t clauseguard .
 docker run --rm -p 7860:7860 clauseguard
 # open http://localhost:7860 ; API docs at http://localhost:7860/docs
@@ -39,6 +39,14 @@ Explanations come from templates by default. To use Claude instead, set in the S
 `CLAUSEGUARD_LLM=anthropic`. Optional: `CLAUSEGUARD_LLM_MODEL` (default `claude-opus-5-5`),
 `CLAUSEGUARD_LLM_EFFORT` (default `low`). Only the flagged clauses are sent, never the whole
 document; if the API fails, the templates are used.
+
+## Browser extension
+
+The API accepts requests from browser extensions (CORS for `chrome-extension://` and
+`moz-extension://` origins), so once the Space runs, set its address in the extension's
+settings (`docs/EXTENSION.md`). Use the Space's direct URL, `https://<user>-<space>.hf.space`,
+not the `huggingface.co/spaces/...` page. To allow other web origins, set
+`CLAUSEGUARD_CORS_ORIGINS` (comma-separated) in the Space settings.
 
 ## Notes
 

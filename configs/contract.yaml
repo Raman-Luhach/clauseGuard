@@ -7,6 +7,10 @@ text_style: none
 max_length: 256               # tokens; checked against the data card
 min_unit_words: 3
 threshold_objective: f1
+# Recall first (missing a risky clause is the costliest error): the smallest F-beta whose
+# validation any-risk recall reaches the target, keeping any-risk precision >= 0.70.
+target_any_recall: 0.85
+min_any_precision: 0.70
 selection_metric: macro_f1
 pos_weight: {mode: sqrt, max: 20.0}
 risk_score_k: 8.0             # default only; each run stores its own calibrated value
@@ -55,6 +59,48 @@ models:
     batch_size: 32
     patience: 2
     negative_ratio: 4.0
+  # Second GPU session (Lambda), on the rebuilt sentence table (no more splits inside
+  # redaction markers). A 2x2 design: LEGAL-BERT vs DeBERTa-v3, with and without rare clause
+  # types repeated up to 4x (os); all with twice as many unlabelled sentences (r8: about 44k
+  # training sentences instead of 24k), since recall was the weak point.
+  legal-bert-r8:
+    type: transformer
+    checkpoint: nlpaueb/legal-bert-base-uncased
+    lr: 3.0e-5
+    epochs: 6
+    batch_size: 64              # 44k sentences: bigger batches keep an H100 busy
+    patience: 2
+    negative_ratio: 8.0
+  legal-bert-os-r8:
+    type: transformer
+    checkpoint: nlpaueb/legal-bert-base-uncased
+    lr: 3.0e-5
+    epochs: 6
+    batch_size: 64
+    patience: 2
+    negative_ratio: 8.0
+    oversample: {min_positives: 400, max_factor: 4}
+  deberta-r8:
+    type: transformer
+    checkpoint: microsoft/deberta-v3-base
+    lr: 2.0e-5
+    epochs: 6
+    batch_size: 64
+    patience: 2
+    negative_ratio: 8.0
+  deberta-os-r8:
+    type: transformer
+    checkpoint: microsoft/deberta-v3-base
+    lr: 2.0e-5
+    epochs: 6
+    batch_size: 64
+    patience: 2
+    negative_ratio: 8.0
+    oversample: {min_positives: 400, max_factor: 4}
+  tfidf-os: {type: tfidf, ngram_max: 2, min_df: 2, c_grid: [1.0, 4.0, 16.0, 64.0], oversample: {min_positives: 400, max_factor: 4}}
+
+# The GPU session trains these; distilbert and legal-bert are already trained (legal-bert is served).
+gpu_candidates: [legal-bert-r8, legal-bert-os-r8, deberta-r8, deberta-os-r8]
 
 smoke: {n_train: 200, n_eval: 100, epochs: 1, max_length: 64, batch_size: 8}
 

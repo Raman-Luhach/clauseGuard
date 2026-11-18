@@ -23,8 +23,16 @@ app = typer.Typer(
 )
 data_app = typer.Typer(help="Download, prepare and describe datasets.", no_args_is_help=True)
 models_app = typer.Typer(help="List and select trained runs.", no_args_is_help=True)
+router_app = typer.Typer(help="The document-type router.", no_args_is_help=True)
+joint_app = typer.Typer(
+    help="The joint model over all three modules (an experiment).", no_args_is_help=True
+)
 app.add_typer(data_app, name="data")
 app.add_typer(models_app, name="models")
+results_app = typer.Typer(help="Move results from a GPU machine to this one.", no_args_is_help=True)
+app.add_typer(router_app, name="router")
+app.add_typer(results_app, name="results")
+app.add_typer(joint_app, name="joint")
 console = Console(stderr=True)
 
 Module = Annotated[str, typer.Argument(help=f"Module: {', '.join(DOCUMENT_TYPES)}")]
@@ -166,6 +174,22 @@ def train_gpu(
     )
     for module, entry in summary.items():
         console.print(f"[green]{module}[/]: winner {entry['winner']}, selected {entry['selected']}")
+
+
+@app.command()
+def retune(
+    module: Module,
+    run: Annotated[str | None, typer.Option(help="Run id (default: selected or best run)")] = None,
+    target_recall: Annotated[
+        float | None,
+        typer.Option(help="Any-risk recall to reach on validation (default: module config)"),
+    ] = None,
+) -> None:
+    """Re-tune a finished run's thresholds on validation (e.g. for higher recall); no training."""
+    from clauseguard.models.retune import retune_run
+
+    result = retune_run(module, run, target_any_recall=target_recall, log=console.print)
+    console.print(f"[green]{result['run']}[/]: thresholds {result['thresholds']['method']}")
 
 
 @app.command("final-report")
@@ -326,6 +350,54 @@ def export_onnx_cmd(
 
 
 @app.command()
+def screening(
+    module: Module,
+    run: Annotated[str | None, typer.Option(help="Run id (default: selected or best run)")] = None,
+    flags_kept: Annotated[
+        float, typer.Option(help="Share of the transformer's flags the screen must keep")
+    ] = 0.99,
+) -> None:
+    """Let the TF-IDF model screen units so the transformer reads fewer (faster analysis)."""
+    from clauseguard.models.screening import screen_run
+
+    screen_run(module, run, flags_kept=flags_kept, log=console.print)
+
+
+@app.command("optimize-onnx")
+def optimize_onnx_cmd(
+    module: Module,
+    run: Annotated[str | None, typer.Option(help="Run id (default: selected or best run)")] = None,
+) -> None:
+    """Add a graph-optimised variant to an existing ONNX export (no PyTorch needed), compare
+    it with the fp32 graph on validation, and serve it if it is faster at the same accuracy."""
+    from clauseguard.data.units import label_matrix, load_units
+    from clauseguard.models.onnx import EXPORT_DIR, compare_backends, optimize_graph
+    from clauseguard.models.runs import read_json, resolve_run
+
+    cfg = load_module_config(module)
+    path = resolve_run(module, run, cfg.selection_metric)
+    onnx_dir = path / EXPORT_DIR
+    if not (onnx_dir / "model.onnx").exists():
+        console.print(f"[red]{path.name} has no fp32 ONNX graph; run export-onnx first[/]")
+        raise typer.Exit(1)
+    meta = json.loads((onnx_dir / "onnx.json").read_text())
+    if optimize_graph(onnx_dir / "model.onnx", onnx_dir / "model.opt.onnx", log=console.print):
+        meta["files"] = {**meta["files"], "fp32": "model.onnx", "fp32-opt": "model.opt.onnx"}
+        (onnx_dir / "onnx.json").write_text(json.dumps(meta, indent=2))
+    units = load_units(module)
+    val = units[units["split"] == "validation"]
+    by_label = read_json(path / "thresholds.json")
+    compare_backends(
+        path,
+        val["text"].tolist(),
+        label_matrix(val["labels"], cfg.label_ids),
+        [by_label[label] for label in cfg.label_ids],
+        cfg.label_ids,
+        log=console.print,
+    )
+
+
+@app.command()
 def evaluate(
     module: Module,
     run: Annotated[str | None, typer.Option(help="Run id (default: selected or best run)")] = None,
@@ -403,42 +475,92 @@ SEVERITY_STYLE = {
 }
 
 
-@app.command()
-def analyze(
-    file: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="PDF or text file")],
-    doc_type: Annotated[
-        str, typer.Option("--type", "-t", help=f"Document type: {', '.join(DOCUMENT_TYPES)}")
-    ],
-    run: Annotated[str | None, typer.Option(help="Run id (default: selected or best run)")] = None,
-    out: Annotated[Path | None, typer.Option(help="Write the JSON report to this file")] = None,
-    as_json: Annotated[
-        bool, typer.Option("--json", help="Print the JSON report to stdout")
-    ] = False,
+@router_app.command("train")
+def router_train() -> None:
+    """Train the document-type router (CPU, about a minute); report in reports/generated."""
+    from clauseguard.router import train_router
+
+    train_router(log=console.print)
+    console.print("[green]router saved[/]")
+
+
+@results_app.command("pack")
+def results_pack(
+    out: Annotated[Path, typer.Argument(help="Archive to write, e.g. clauseguard-results.tgz")],
+    modules: Annotated[list[str] | None, typer.Option("--module", help="Default: all")] = None,
 ) -> None:
-    """Analyse a document. You must say what kind of document it is with --type."""
-    from clauseguard.pipeline import analyze as run_analysis
+    """On the GPU machine: archive every finished run (no PyTorch weights) and the reports."""
+    from clauseguard.config import available_modules
+    from clauseguard.results import pack_results
+
+    pack_results(out, modules or available_modules(), log=console.print)
+
+
+@results_app.command("import")
+def results_import(
+    archive: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="Results .tgz")],
+) -> None:
+    """On the Mac: add a GPU session's runs and serve, per module, the better of the run
+    served so far and the session's selected run (on validation)."""
+    from clauseguard.results import import_results
+
+    import_results(archive, log=console.print)
+    console.print(
+        "next: [bold]make after-import[/] (results table, robustness, latency, packaging)"
+    )
+
+
+@joint_app.command("train")
+def joint_train(
+    smoke: Annotated[bool, typer.Option(help="Tiny CPU run to check the pipeline works")] = False,
+    final: Annotated[bool, typer.Option(help="Also evaluate the test split (once)")] = False,
+    seed: Annotated[int, typer.Option(help="Random seed")] = 13,
+    device: Annotated[str, typer.Option(help="auto, cuda, mps or cpu")] = "auto",
+) -> None:
+    """Train one model on the sentences of all three modules; compare with the specialists."""
+    from clauseguard.joint import train_joint
+
+    path = train_joint(seed=seed, smoke=smoke, device=device, final=final, log=console.print)
+    console.print(f"[green]done[/] -> {path}")
+
+
+@joint_app.command("report")
+def joint_report() -> None:
+    """Rewrite reports/generated/joint_results.md for the latest joint run."""
+    from clauseguard.joint import latest_joint_run, write_joint_report
+
+    run = latest_joint_run()
+    if run is None:
+        console.print("[red]no joint run; train one with `clauseguard joint train`[/]")
+        raise typer.Exit(1)
+    console.print(f"report -> {write_joint_report(run)}")
+
+
+@app.command()
+def detect(
+    file: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="PDF or text file")],
+) -> None:
+    """Suggest the document type of a file (terms of service, privacy policy or contract)."""
+    from clauseguard.pipeline import detect as run_detect
+    from clauseguard.pipeline import load_document
 
     try:
-        result = run_analysis(doc_type, path=file, run_id=run)
+        detection = run_detect(load_document(path=file))
     except InputError as exc:
         console.print(f"[red]{exc.message}[/] ({exc.code})")
         raise typer.Exit(2) from exc
-    except ModelNotAvailableError as exc:
-        console.print(f"[red]{exc}[/]")
-        raise typer.Exit(1) from exc
+    if detection is None:
+        console.print("[red]no router; train it with `clauseguard router train`[/]")
+        raise typer.Exit(1)
+    typer.echo(json.dumps(detection.as_dict(), indent=2))
 
-    report = result.model_dump(mode="json")
-    if out:
-        out.write_text(json.dumps(report, indent=2), encoding="utf-8")
-        console.print(f"report -> {out}")
-    if as_json:
-        typer.echo(json.dumps(report, indent=2))
-        return
 
+def _print_result(result) -> None:
     cfg = load_module_config(result.document_type)
+    chosen = " (detected automatically)" if result.type_source == "router" else ""
     console.print(
-        f"\n[bold]{cfg.display_name}[/] · {result.n_words:,} words · {result.n_units} units · "
-        f"model {result.model.run_id}"
+        f"\n[bold]{cfg.display_name}[/]{chosen} · {result.n_words:,} words · {result.n_units} "
+        f"units · model {result.model.run_id}"
     )
     console.print(
         f"Risk score [bold]{result.risk_score}[/] / 100 ([bold]{result.risk_band}[/]) · "
@@ -454,6 +576,53 @@ def analyze(
     Console().print(table)
     for warning in result.warnings:
         console.print(f"[yellow]note:[/] {warning}")
+
+
+@app.command()
+def analyze(
+    file: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="PDF or text file")],
+    doc_type: Annotated[
+        str,
+        typer.Option(
+            "--type",
+            "-t",
+            help=f"Document type: {', '.join(DOCUMENT_TYPES)}; auto (detect it); or all (run "
+            "every analyzer, or a comma-separated list such as tos,privacy)",
+        ),
+    ] = "auto",
+    run: Annotated[str | None, typer.Option(help="Run id (default: selected or best run)")] = None,
+    out: Annotated[Path | None, typer.Option(help="Write the JSON report to this file")] = None,
+    as_json: Annotated[
+        bool, typer.Option("--json", help="Print the JSON report to stdout")
+    ] = False,
+) -> None:
+    """Analyse a document. The type is detected unless you give it with --type."""
+    from clauseguard.pipeline import analyze as run_analysis
+    from clauseguard.pipeline import analyze_combined
+
+    combined = doc_type == "all" or "," in doc_type
+    try:
+        if combined:
+            types = None if doc_type == "all" else [t.strip() for t in doc_type.split(",")]
+            result = analyze_combined(types, path=file)
+        else:
+            result = run_analysis(doc_type, path=file, run_id=run)
+    except InputError as exc:
+        console.print(f"[red]{exc.message}[/] ({exc.code})")
+        raise typer.Exit(2) from exc
+    except ModelNotAvailableError as exc:
+        console.print(f"[red]{exc}[/]")
+        raise typer.Exit(1) from exc
+
+    report = result.model_dump(mode="json")
+    if out:
+        out.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        console.print(f"report -> {out}")
+    if as_json:
+        typer.echo(json.dumps(report, indent=2))
+        return
+    for single in result.results if combined else [result]:
+        _print_result(single)
     console.print(f"[dim]{result.disclaimer}[/]")
 
 

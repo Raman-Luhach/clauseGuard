@@ -57,6 +57,11 @@ def log_analysis(result, *, source: str, latency_ms: float) -> None:
             "severity_counts": result.severity_counts,
             "risk_score": result.risk_score,
             "explanations": dict(Counter(f.explanation_source for f in result.findings)),
+            # who chose the type, and what the router thought (for router monitoring)
+            "type_source": getattr(result, "type_source", "user"),
+            "router_type": (result.detection or {}).get("document_type")
+            if getattr(result, "detection", None)
+            else None,
             "latency_ms": round(latency_ms, 1),
         }
     )

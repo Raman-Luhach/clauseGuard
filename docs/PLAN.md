@@ -2,7 +2,7 @@
 
 ClauseGuard reads a legal or policy document, flags clauses that could harm the reader, groups them into risk categories with a severity, gives the document a risk score, and explains each flag in plain language.
 
-> **Status (2026-10-23):** Parts 1–4 are coded and checked on the Mac (`make check`). All three modules work end to end with their TF-IDF baselines, in the CLI, the API and the web UI. All 13 configured models pass `--smoke`, and the GPU session itself passes in miniature. Next: the GPU session on Kaggle (section 6, step by step in `docs/TRAINING.md`).
+> **Status (2026-11-18):** first GPU session done (Kaggle); second round in progress, see section 9. **Earlier status (2026-10-23):** Parts 1–4 are coded and checked on the Mac (`make check`). All three modules work end to end with their TF-IDF baselines, in the CLI, the API and the web UI. All 13 configured models pass `--smoke`, and the GPU session itself passes in miniature. Next: the GPU session on Kaggle (section 6, step by step in `docs/TRAINING.md`).
 
 It has three separate analyzers:
 
@@ -320,3 +320,40 @@ The design already supports this. Every module produces the same `Finding` forma
 | "We do not share your data" flagged as sharing | `negated_practice` sub-label plus negation robustness tests |
 | GPU cost or time | `--smoke` locally first; small models; fp16; checkpoints; contract negative sampling |
 | OPP-115 licence | Non-commercial use only; privacy model repo kept private or clearly labelled |
+
+---
+
+## 9. Second round (November 2026): router, better models, joint model, browser extension
+
+Decided after the first GPU session's results (ToS test any-risk recall 0.77 and contract 0.61
+against a 0.85 target; ToS and contract latency just over 10 s per 5,000 words).
+
+1. **Document-type router** (`clauseguard router train`, `src/clauseguard/router.py`): TF-IDF +
+   logistic regression on 150-600-word windows of the full documents behind the three datasets
+   (each document keeps its module's split), plus an "other" class of unrelated text (AG News,
+   WikiText-2). Test: 100% of documents, 99.4% of short excerpts; unrelated text is recognised.
+   The user still decides: the UI pre-selects a confident suggestion; `document_type=auto` in
+   the API lets the router choose and returns 422 when it is unsure.
+2. **Error analysis** of the served models (`docs/ERROR_ANALYSIS.md`), which led to:
+   - **Recall-targeted thresholds** (`target_any_recall`, `min_any_precision` in the configs;
+     `clauseguard retune`): ToS now meets both targets on test without retraining (recall
+     0.826 → 0.872, precision 0.781).
+   - **Contract sentences no longer split inside redaction markers** ("[***]"): a third of the
+     contract errors were such fragments. The TF-IDF baseline alone went from 0.578 to 0.660
+     validation macro-F1 on the rebuilt sentences.
+   - **GPU session 2 (Lambda)**: oversampling of rare labels, DeBERTa-v3 challengers, more
+     contract training sentences; candidates per module in `gpu_candidates`
+     (`docs/TRAINING.md`). `clauseguard results import` then serves, per module, the better of
+     the current and the new model on validation.
+3. **Joint model** (`clauseguard joint train`, an experiment): one encoder over the sentences of
+   all three modules with a loss mask (each sentence only teaches its own dataset's labels),
+   compared per module with the specialists; privacy is also compared per segment.
+4. **Combined analysis**: `POST /analyze-combined` / `analyze --type all` runs several analyzers
+   on one document.
+5. **Latency**: TF-IDF screening (the transformer reads only the 35-45% of sentences the fast
+   model gives some chance of a label, keeping >= 99% of its flags) and batching by token length:
+   a 5,000-word document now takes 4.5 s (ToS) and 5.3 s (contract) on the Mac instead of 17-19 s;
+   privacy, which can't be screened, 11 s.
+6. **Browser extension** (`extension/`, `docs/EXTENSION.md`): highlights flagged clauses on any
+   web page, with explanations on hover; type suggested by the router; right-click analysis of
+   a selection; works with the local server or the deployed Space (CORS enabled for extensions).

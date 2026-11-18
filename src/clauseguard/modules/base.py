@@ -8,6 +8,7 @@ adjacent flags with the same label are merged (contracts, whose clauses span sen
 
 from __future__ import annotations
 
+import os
 import time
 from collections import Counter
 from pathlib import Path
@@ -22,6 +23,7 @@ from clauseguard.ingestion.normalize import unfair_tos_style
 from clauseguard.ingestion.segment import Span, is_classifiable, split_paragraphs, split_sentences
 from clauseguard.models.base import load_model, serving_model_dir
 from clauseguard.models.runs import read_json, resolve_run
+from clauseguard.models.screening import load_screen, screen_scores
 from clauseguard.monitoring import BORDERLINE_MARGIN
 from clauseguard.schema import AnalysisResult, Finding, LabelScore, ModelInfo
 from clauseguard.scoring.risk_score import raw_risk, risk_band, score_from_raw
@@ -47,6 +49,21 @@ class Analyzer:
         by_label = read_json(self.run_path / "thresholds.json")
         self.thresholds = np.array([by_label[label] for label in self.cfg.label_ids])
         self.risk_k = float(self.meta.get("risk_score_k") or self.cfg.risk_score_k)
+        # TF-IDF screening (models/screening.py): the transformer reads only units that the
+        # fast model gives some chance of a label. CLAUSEGUARD_SCREENING=off reads every unit.
+        screening_on = os.environ.get("CLAUSEGUARD_SCREENING", "on").lower() != "off"
+        self.screen = load_screen(self.run_path) if screening_on else None
+
+    def predict(self, texts: list[str]) -> tuple[np.ndarray, int]:
+        """Probabilities for every text, and how many the main model actually read."""
+        if self.screen is None or not texts:
+            return self.model.predict_proba(texts), len(texts)
+        screen_model, min_score = self.screen
+        keep = np.flatnonzero(screen_scores(screen_model, texts) >= min_score)
+        probs = np.zeros((len(texts), len(self.cfg.label_ids)), dtype=np.float32)
+        if len(keep):
+            probs[keep] = self.model.predict_proba([texts[i] for i in keep])
+        return probs, len(keep)
 
     def segment(self, doc: Document) -> list[Span]:
         if self.cfg.unit_type == "paragraph":
@@ -160,7 +177,7 @@ class Analyzer:
             (i, s) for i, s in enumerate(spans) if is_classifiable(s.text, self.cfg.min_unit_words)
         ]
         segmented = time.perf_counter()
-        probs = self.model.predict_proba([self.model_text(s.text) for _, s in units])
+        probs, n_read = self.predict([self.model_text(s.text) for _, s in units])
         predicted = time.perf_counter()
 
         label_ids = self.cfg.label_ids
@@ -218,6 +235,7 @@ class Analyzer:
             text=doc.text,
             diagnostics={
                 "classified_units": len(units),
+                "units_read_by_model": n_read,  # fewer than classified when screening is on
                 "borderline_flags": borderline,
                 "flags": dict(flag_counts),
             },

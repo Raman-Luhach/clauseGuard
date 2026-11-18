@@ -47,6 +47,7 @@ def tiny_configs(tmp_path, monkeypatch, tiny_checkpoint):  # noqa: F811
         "tiny-a": {**tiny, "lr": 1e-3},
         "tiny-b": {**tiny, "lr": 5e-4},
     }
+    cfg.pop("gpu_candidates", None)  # every transformer below is a candidate
     cfg["max_length"] = 32
     cfg["smoke"] = {"n_train": 60, "n_eval": 40, "epochs": 1, "max_length": 32, "batch_size": 8}
     (configs / "tos.yaml").write_text(yaml.safe_dump(cfg))

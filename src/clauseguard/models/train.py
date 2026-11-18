@@ -10,12 +10,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from clauseguard.config import ModuleConfig, load_module_config, load_taxonomy
+from clauseguard.config import ModuleConfig, OversampleSpec, load_module_config, load_taxonomy
 from clauseguard.data.units import UNKNOWN_DOC, label_matrix, load_units
 from clauseguard.evaluation.metrics import compute_metrics
 from clauseguard.models.baselines import MajorityModel, TfidfModel
 from clauseguard.models.runs import append_log, data_sha256, git_commit, new_run, write_json
-from clauseguard.models.thresholds import DEFAULT_THRESHOLD, tune_thresholds
+from clauseguard.models.thresholds import DEFAULT_THRESHOLD, tune_for_recall, tune_thresholds
 from clauseguard.monitoring import baseline_from_validation
 from clauseguard.scoring.risk_score import calibrate_k, document_raw_scores
 
@@ -51,6 +51,48 @@ def sample_negatives(
     return df.iloc[np.sort(picked)]
 
 
+def oversample_rare(
+    df: pd.DataFrame, label_ids: list[str], spec: OversampleSpec
+) -> tuple[pd.DataFrame, dict[str, int]]:
+    """Repeat the units of rare labels (training only).
+
+    A label with ``n`` positive units gets factor ``min(max_factor, ceil(min_positives / n))``;
+    a unit is repeated by the largest factor among its labels. Returns the new table and the
+    factor used per label (1 = unchanged).
+    """
+    y = label_matrix(df["labels"], label_ids)
+    n_pos = y.sum(axis=0)
+    factors = np.ones(len(label_ids), dtype=int)
+    for j, n in enumerate(n_pos):
+        if 0 < n < spec.min_positives:
+            factors[j] = min(spec.max_factor, int(np.ceil(spec.min_positives / n)))
+    repeat = np.where(y.any(axis=1), (y * factors[None, :]).max(axis=1), 1)
+    out = df.iloc[np.repeat(np.arange(len(df)), repeat)]
+    return out, {label: int(f) for label, f in zip(label_ids, factors, strict=True) if f > 1}
+
+
+def choose_thresholds(
+    cfg: ModuleConfig, y_val: np.ndarray, p_val: np.ndarray, model_type: str
+) -> tuple[list[float], dict]:
+    """Thresholds tuned on validation: F1 (or F2) optimal, or recall-targeted when the module
+    sets ``target_any_recall``. Returns the thresholds and a description for meta.json."""
+    if model_type == "majority":
+        return [DEFAULT_THRESHOLD] * len(cfg.label_ids), {"method": "default"}
+    if cfg.target_any_recall is not None:
+        thresholds, beta, tried = tune_for_recall(
+            y_val, p_val, risky_mask(cfg), cfg.target_any_recall, cfg.min_any_precision
+        )
+        return thresholds, {
+            "method": "target_any_recall",
+            "target": cfg.target_any_recall,
+            "beta": beta,
+            "tried": tried,
+        }
+    return tune_thresholds(y_val, p_val, cfg.threshold_objective), {
+        "method": cfg.threshold_objective
+    }
+
+
 def train_run(
     module: str,
     model_name: str,
@@ -78,6 +120,11 @@ def train_run(
     if smoke:
         train_df = subsample(train_df, label_ids, cfg.smoke.n_train, seed)
         val_df = subsample(val_df, label_ids, cfg.smoke.n_eval, seed)
+    oversampled: dict[str, int] = {}
+    if spec.oversample is not None:
+        before = len(train_df)
+        train_df, oversampled = oversample_rare(train_df, label_ids, spec.oversample)
+        log(f"oversampling rare labels {oversampled}: {before} -> {len(train_df)} units")
     y_train = label_matrix(train_df["labels"], label_ids)
     y_val = label_matrix(val_df["labels"], label_ids)
     train_texts, val_texts = train_df["text"].tolist(), val_df["text"].tolist()
@@ -116,10 +163,7 @@ def train_run(
         )
 
     p_val = model.predict_proba(val_texts)
-    if spec.type == "majority":
-        thresholds = [DEFAULT_THRESHOLD] * len(label_ids)
-    else:
-        thresholds = tune_thresholds(y_val, p_val, cfg.threshold_objective)
+    thresholds, threshold_info = choose_thresholds(cfg, y_val, p_val, spec.type)
     metrics = compute_metrics(
         y_val, p_val, thresholds, label_ids, risky=risky_mask(cfg), lexglue=module == "tos"
     )
@@ -147,6 +191,8 @@ def train_run(
         "n_validation": len(val_df),
         "spec": spec.model_dump(),
         "train_info": info,
+        "oversampled_labels": oversampled,
+        "thresholds": threshold_info,
         "risk_score_k": k,
         "risk_calibration_docs": len(raw),
         "monitoring_baseline": baseline_from_validation(p_val, thresholds, label_ids),

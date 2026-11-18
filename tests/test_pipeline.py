@@ -101,11 +101,11 @@ def test_smoke_run_is_kept_out_of_the_log(synthetic_tos, home):
 runner = CliRunner()
 
 
-def test_cli_analyze_requires_type(trained_tos, tmp_path):
+def test_cli_analyze_without_type_or_router_asks_for_type(trained_tos, tmp_path):
     doc = tmp_path / "terms.txt"
     doc.write_text(TOS_TEXT)
-    result = runner.invoke(app, ["analyze", str(doc)])
-    assert result.exit_code != 0 and "--type" in result.output
+    result = runner.invoke(app, ["analyze", str(doc)])  # --type defaults to auto
+    assert result.exit_code == 2 and "Choose the document type" in result.output
 
 
 def test_cli_analyze_json(trained_tos, tmp_path):

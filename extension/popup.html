@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>ClauseGuard</title>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body class="popup">
+  <header class="bar">
+    <h1>Clause<span>Guard</span></h1>
+    <a href="#" id="open-options" class="small">Settings</a>
+  </header>
+
+  <section id="start">
+    <p id="page-info" class="muted">Reading this page…</p>
+    <label for="doctype" class="field-label">What kind of document is this?</label>
+    <select id="doctype">
+      <option value="">Choose…</option>
+      <option value="tos">Terms of Service</option>
+      <option value="privacy">Privacy Policy</option>
+      <option value="contract">Contract</option>
+    </select>
+    <p id="detect-hint" class="hint" role="status" aria-live="polite"></p>
+    <button type="button" id="analyze" class="primary" disabled>Analyse this page</button>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section id="result" hidden>
+    <div class="summary">
+      <div id="score" class="score"></div>
+      <div>
+        <p id="summary-line" class="summary-line"></p>
+        <p id="highlight-line" class="muted small"></p>
+      </div>
+    </div>
+    <ul id="warnings" class="warnings"></ul>
+    <ol id="findings" class="findings"></ol>
+    <div class="row">
+      <button type="button" id="report" class="primary">Full report</button>
+      <button type="button" id="clear" class="secondary">Remove highlights</button>
+      <button type="button" id="again" class="secondary">Back</button>
+    </div>
+  </section>
+
+  <footer class="disclaimer">Not legal advice. The page text is sent to your ClauseGuard server for analysis and is not stored.</footer>
+  <script src="lib/core.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,8 +1,9 @@
 # ClauseGuard common tasks. Everything here runs on a laptop CPU; GPU training comes later.
 MODULES := tos privacy contract
 
-.PHONY: setup lint format test test-fast data train-cpu evaluate cv smoke example check \
-	train-gpu train-gpu-smoke evaluate-final export-onnx robustness benchmark package after-gpu serve
+.PHONY: setup lint format test test-fast data train-cpu router retune evaluate cv smoke example \
+	check joint-smoke train-gpu train-gpu-smoke evaluate-final export-onnx robustness benchmark \
+	package after-gpu after-import screen joint-report llm-compare extension serve
 
 setup:  ## install Python 3.12 and all dependencies
 	uv sync
@@ -25,8 +26,14 @@ data:  ## download all datasets (checksum-verified) and build unit tables + data
 	uv run clauseguard data download all
 	for m in $(MODULES); do uv run clauseguard data prepare $$m && uv run clauseguard data card $$m || exit 1; done
 
-train-cpu:  ## the real majority and TF-IDF baselines (seconds)
+train-cpu: router  ## the real majority and TF-IDF baselines (seconds) and the router
 	for m in $(MODULES); do uv run clauseguard train $$m --model majority && uv run clauseguard train $$m --model tfidf || exit 1; done
+
+router:  ## the document-type router (CPU, about a minute)
+	uv run clauseguard router train
+
+retune:  ## re-tune the served runs' thresholds for the recall targets in configs/ (no training)
+	for m in $(MODULES); do uv run clauseguard retune $$m || exit 1; done
 
 evaluate:  ## validation report for the served run of every module
 	for m in $(MODULES); do uv run clauseguard evaluate $$m || exit 1; done
@@ -42,9 +49,12 @@ example:  ## analyse the sample documents (one per document type)
 	uv run clauseguard analyze examples/github-privacy-statement.txt --type privacy
 	uv run clauseguard analyze examples/cuad-test-contract.txt --type contract
 
-check: lint test smoke train-gpu-smoke  ## everything that must pass before the GPU session
+check: lint test smoke train-gpu-smoke joint-smoke  ## everything that must pass before the GPU session
 
-# ---- GPU session (Kaggle or any GPU machine); see docs/TRAINING.md
+joint-smoke:  ## the joint model in miniature, on the CPU
+	uv run clauseguard joint train --smoke
+
+# ---- GPU session (Lambda, Kaggle or any GPU machine); see docs/TRAINING.md
 train-gpu:  ## every transformer for every module, best selected; resumable
 	uv run clauseguard train-gpu $(MODULES)
 
@@ -68,6 +78,24 @@ package:  ## copy the served models to deploy/models for the Docker image
 	rm -rf deploy/models && uv run clauseguard package-models deploy/models $(foreach m,$(MODULES),--module $(m))
 
 after-gpu: evaluate-final export-onnx robustness benchmark package  ## all post-training steps
+
+# ---- back on the Mac, after `clauseguard results import <archive>`
+after-import: evaluate-final screen robustness benchmark package joint-report  ## refresh reports, package
+
+SCREENED := tos contract  # privacy: nearly every paragraph has a label, nothing to skip
+screen:  ## TF-IDF screening for the served transformers (the transformer reads fewer units)
+	for m in $(SCREENED); do uv run clauseguard screening $$m || exit 1; done
+
+joint-report:  ## joint model vs the served specialists (after a joint run)
+	-uv run clauseguard joint report
+
+llm-compare:  ## zero-shot Claude vs the served models (needs ANTHROPIC_API_KEY; about $4)
+	for m in $(MODULES); do uv run clauseguard llm-compare $$m || exit 1; done
+
+extension:  ## zip the browser extension for the Chrome Web Store -> dist/
+	mkdir -p dist && rm -f dist/clauseguard-extension.zip
+	cd extension && zip -qr ../dist/clauseguard-extension.zip . -x "*.DS_Store" -x "tests/*"
+	@echo "dist/clauseguard-extension.zip"
 
 serve:  ## web UI + API on http://127.0.0.1:8000
 	uv run clauseguard serve

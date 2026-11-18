@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClauseGuard report</title>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body class="page">
+  <header class="bar">
+    <h1>Clause<span>Guard</span> report</h1>
+    <a href="#" id="open-options" class="small">Settings</a>
+  </header>
+  <p id="source" class="muted"></p>
+  <div id="empty" class="card" hidden>
+    <p>No report yet. Open a terms of service, privacy policy or contract page, click the
+      ClauseGuard button in the toolbar, and press <strong>Analyse this page</strong>. You can also
+      select text on any page, right-click it and choose <strong>Analyse selected text with ClauseGuard</strong>.</p>
+  </div>
+  <div id="error" class="card status error" hidden></div>
+  <section id="report" hidden>
+    <div class="card summary">
+      <div id="score" class="score"></div>
+      <div>
+        <p id="summary-line" class="summary-line"></p>
+        <p id="model-line" class="muted small"></p>
+        <ul id="warnings" class="warnings"></ul>
+      </div>
+    </div>
+    <div id="protections" class="card" hidden>
+      <h2>Protections in this policy</h2>
+      <ul id="protections-list"></ul>
+    </div>
+    <h2>Flagged clauses</h2>
+    <ol id="findings" class="findings"></ol>
+  </section>
+  <p class="disclaimer" id="disclaimer"></p>
+  <script src="lib/core.js"></script>
+  <script src="report.js"></script>
+</body>
+</html>
