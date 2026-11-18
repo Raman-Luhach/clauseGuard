@@ -21,6 +21,7 @@ RUN uv sync --frozen --no-install-project --no-default-groups --group serve --gr
 COPY src ./src
 COPY configs ./configs
 COPY examples ./examples
+COPY extension ./extension
 RUN uv sync --frozen --no-default-groups --group serve --group llm
 
 COPY deploy/models ./artifacts

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!--#head-->
+  <title>Browser extension · ClauseGuard</title>
+  <meta name="description" content="The ClauseGuard browser extension highlights risky clauses on any terms of service, privacy policy or contract page.">
+</head>
+<body>
+<!--#header-->
+<main id="main">
+  <section class="hero" style="padding-bottom:64px">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="crumbs"><a href="/">Home</a> / Browser extension</p>
+        <span class="eyebrow">Browser extension</span>
+        <h1>ClauseGuard on <em>every</em> page you read.</h1>
+        <p class="lead">Open any terms of service, privacy policy or contract in your browser, click the ClauseGuard button, and the risky clauses are highlighted right on the page, with explanations on hover.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary btn-lg" href="/extension.zip" id="ext-download"><svg aria-hidden="true"><use href="#i-download"/></svg>Download the extension</a>
+          <a class="btn btn-secondary btn-lg" href="#install">How to install</a>
+        </div>
+        <div class="hero-note">
+          <span><svg aria-hidden="true"><use href="#i-check-circle"/></svg>Chrome, Edge, Brave, Arc</span>
+          <span><svg aria-hidden="true"><use href="#i-check-circle"/></svg>Reads a page only when you click</span>
+        </div>
+      </div>
+
+      <div class="browser" aria-hidden="true">
+        <div class="mock-bar"><i></i><i></i><i></i><span class="url">example.com/terms</span><span class="ext"><svg><use href="#i-shield"/></svg></span></div>
+        <div class="browser-body">
+          <div class="page">
+            <h4>12. Termination</h4>
+            We reserve the right to modify the Service at any time. <mark class="sev-high">We may suspend or terminate your account at our sole discretion, without notice.</mark> You can stop using the Service whenever you like.
+            <h4 style="margin-top:14px">13. Disputes</h4>
+            <mark class="sev-medium">You agree to resolve any dispute through binding individual arbitration.</mark>
+          </div>
+          <div class="popup">
+            <div class="score-line"><div class="mini-score">58</div><div><strong>Medium risk</strong><br><span class="muted">9 flagged clauses</span></div></div>
+            <div class="flag"><span class="badge sev-high">High</span>Unilateral termination</div>
+            <div class="flag"><span class="badge sev-medium">Med</span>Arbitration</div>
+            <div class="flag"><span class="badge sev-high">High</span>Limitation of liability</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">What it does</span>
+        <h2>The full analysis, without leaving the page.</h2>
+      </div>
+      <div class="grid grid-4">
+        <div class="feature"><div class="doc-icon"><svg aria-hidden="true"><use href="#i-scan"/></svg></div><h3>Detects the type</h3><p>Reads the page's main content and pre-selects the document type. You can change it.</p></div>
+        <div class="feature"><div class="doc-icon"><svg aria-hidden="true"><use href="#i-highlight"/></svg></div><h3>Highlights in place</h3><p>Flagged clauses are coloured by severity on the page. Hover for the category and explanation.</p></div>
+        <div class="feature"><div class="doc-icon"><svg aria-hidden="true"><use href="#i-file"/></svg></div><h3>Full report</h3><p>Opens every flag in a tab: clause text, explanation, risk group, confidence and protections.</p></div>
+        <div class="feature"><div class="doc-icon"><svg aria-hidden="true"><use href="#i-text"/></svg></div><h3>Right-click a selection</h3><p>Select any text, right-click, and choose “Analyse selected text with ClauseGuard”.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap section">
+    <div class="grid grid-2" style="gap:56px;align-items:start">
+      <section id="install">
+        <span class="eyebrow">Install in two minutes</span>
+        <h2 style="margin-bottom:22px">Load it into your browser</h2>
+        <ol class="install">
+          <li><div><b>Download and unzip</b><p>Use the button above, then unzip <code>clauseguard-extension.zip</code>. Keep the folder somewhere permanent.</p></div></li>
+          <li><div><b>Open the extensions page</b><p>Go to <code>chrome://extensions</code> (or <code>edge://extensions</code>) and switch on <strong>Developer mode</strong>, top right.</p></div></li>
+          <li><div><b>Load unpacked</b><p>Click <strong>Load unpacked</strong> and choose the unzipped <code>clauseguard-extension</code> folder.</p></div></li>
+          <li><div><b>Pin it and try it</b><p>Pin ClauseGuard from the puzzle-piece menu, open a terms of service page and click the button. It connects to the ClauseGuard server on your own computer (<code>http://127.0.0.1:8000</code>) by default<span id="remote-note">; to use this server instead, enter <code id="server-url"></code> in the extension's Settings</span>.</p></div></li>
+        </ol>
+      </section>
+      <section class="prose" style="max-width:none">
+        <span class="eyebrow">Permissions</span>
+        <h2 style="margin-top:0">It asks for as little as possible.</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Permission</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td><code>activeTab</code></td><td>Read the page you are on, only after you click the button.</td></tr>
+              <tr><td><code>scripting</code></td><td>Insert the highlighting into that page.</td></tr>
+              <tr><td><code>storage</code></td><td>Remember the server address and your last report.</td></tr>
+              <tr><td><code>contextMenus</code></td><td>The “Analyse selected text” menu item.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>No access to other tabs or to your browsing history, and nothing runs in the background. Pages the browser protects, such as <code>chrome://</code> pages and the Web Store, can't be read; for PDFs, use the <a href="/analyze">web analyser</a> instead.</p>
+      </section>
+    </div>
+  </div>
+</main>
+<!--#footer-->
+<script>
+  if (/^http:\/\/(127\.0\.0\.1|localhost):8000$/.test(location.origin)) {
+    document.getElementById("remote-note").hidden = true;
+  } else {
+    document.getElementById("server-url").textContent = location.origin;
+  }
+  fetch("/extension.zip", { method: "HEAD" }).then((r) => {
+    if (!r.ok) {
+      const a = document.getElementById("ext-download");
+      a.removeAttribute("href");
+      a.classList.add("btn-secondary");
+      a.classList.remove("btn-primary");
+      a.lastChild.textContent = "Not included in this installation";
+    }
+  }).catch(() => {});
+</script>
+</body>
+</html>

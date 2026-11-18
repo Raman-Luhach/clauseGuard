@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!--#head-->
+  <title>About · ClauseGuard</title>
+  <meta name="description" content="Why ClauseGuard exists, how it handles your documents, its limitations, and the data it was trained on.">
+</head>
+<body>
+<!--#header-->
+<main id="main">
+  <header class="page-head">
+    <div class="wrap">
+      <p class="crumbs"><a href="/">Home</a> / About</p>
+      <span class="eyebrow">About</span>
+      <h1>Nobody reads the fine print. ClauseGuard does.</h1>
+      <p class="lead">Terms of service, privacy policies and contracts decide what happens to your money, your data and your rights, and they are written to be skipped. ClauseGuard makes the important parts impossible to miss.</p>
+    </div>
+  </header>
+
+  <div class="wrap section">
+    <div class="layout-side">
+      <nav class="toc" aria-label="On this page">
+        <p>On this page</p>
+        <ol>
+          <li><a href="#mission">Why it exists</a></li>
+          <li><a href="#privacy">Privacy</a></li>
+          <li><a href="#limitations">Limitations</a></li>
+          <li><a href="#data">Data &amp; licences</a></li>
+          <li><a href="#api">For developers</a></li>
+        </ol>
+      </nav>
+      <div class="prose">
+        <section id="mission">
+          <h2>Why it exists</h2>
+          <p>Reading every policy you accept would take weeks a year, and the clauses that matter most, such as who is liable, who can close your account and where disputes are heard, look just like the boilerplate around them.</p>
+          <p>ClauseGuard was built as an applied NLP project to close that gap with models trained on expert annotations rather than keyword lists: each document type has its own model, and every result is measured on documents the models never saw during training.</p>
+        </section>
+
+        <section id="privacy">
+          <h2>How your document is handled</h2>
+          <ul>
+            <li><strong>Analysed in memory, never stored.</strong> The text is never written to disk or a database. The server keeps its most recent results in memory so that repeating an analysis is instant; they are gone when it restarts.</li>
+            <li><strong>Only counts are logged.</strong> For monitoring, the server records the document type, the number of words and flags, and timings: never the text itself.</li>
+            <li><strong>Feedback is anonymous.</strong> “Correct / Not correct” votes record the category and your answer, not the clause.</li>
+            <li><strong>Optional AI explanations.</strong> If a server is configured to use Claude for explanations, only individual flagged clauses are sent, never the whole document. This server: <span id="llm-status">checking…</span></li>
+            <li><strong>Run it yourself.</strong> ClauseGuard runs entirely on your own computer, with no internet connection needed once installed.</li>
+          </ul>
+        </section>
+
+        <section id="limitations">
+          <h2>Limitations</h2>
+          <div class="callout warn"><strong>ClauseGuard is not legal advice.</strong> It points you to clauses worth reading; it doesn't tell you whether a clause is enforceable where you live, or whether you should sign. For important decisions, ask a qualified professional.</div>
+          <ul>
+            <li><strong>It can miss clauses.</strong> On test data it catches about 87% of risky terms-of-service clauses, 94% of privacy practices and 66% of contract clauses. A clean report is not a guarantee.</li>
+            <li><strong>It can flag fair clauses.</strong> The terms-of-service model learned clause <em>types</em> more than fairness: a reasonable arbitration clause is still flagged as arbitration.</li>
+            <li><strong>English only,</strong> and trained mostly on US and EU documents.</li>
+            <li><strong>Three document types.</strong> Other legal texts (leases, employment contracts, insurance policies) may be partially covered by the contract model, but weren't evaluated.</li>
+            <li><strong>Scanned PDFs</strong> without a text layer can't be read.</li>
+          </ul>
+        </section>
+
+        <section id="data">
+          <h2>Data &amp; licences</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Dataset</th><th>Used for</th><th>Licence</th></tr></thead>
+              <tbody>
+                <tr><td><strong>UNFAIR-ToS</strong> (LexGLUE; from CLAUDETTE)</td><td>Terms of service model</td><td>CC BY 4.0</td></tr>
+                <tr><td><strong>OPP-115</strong> (Usable Privacy Policy Project)</td><td>Privacy policy model</td><td>Research, teaching and scholarship only</td></tr>
+                <tr><td><strong>CUAD v1</strong> (The Atticus Project)</td><td>Contract model</td><td>CC BY 4.0</td></tr>
+                <tr><td><strong>AG News</strong>, <strong>WikiText-2</strong></td><td>Type detector (“unrelated text”)</td><td>Non-commercial research; CC BY-SA 3.0</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Because OPP-115 allows non-commercial use only, ClauseGuard is offered free of charge. Pre-trained models: LEGAL-BERT (AUEB NLP group) and PrivBERT.</p>
+        </section>
+
+        <section id="api">
+          <h2>For developers</h2>
+          <p>Everything the web app does is available through a REST API; see the interactive <a href="/docs">API reference</a>.</p>
+          <ul>
+            <li><code>POST /analyze</code>: a file or text, and <code>document_type</code> (<code>tos</code>, <code>privacy</code>, <code>contract</code> or <code>auto</code>).</li>
+            <li><code>POST /detect</code>: the suggested document type and its confidence.</li>
+            <li><code>GET /taxonomy</code>: every category, with its severity and risk group.</li>
+            <li><code>GET /health</code>: which models are loaded.</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+</main>
+<!--#footer-->
+<script>
+  window.addEventListener("cg:health", (e) => {
+    document.getElementById("llm-status").textContent = e.detail.llm_explanations
+      ? "AI explanations are on." : "AI explanations are off; all explanations are built in.";
+  });
+</script>
+</body>
+</html>

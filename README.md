@@ -39,6 +39,13 @@ text); the router pre-selects the document type, which the user can change; the 
 highlighted document, the flagged clauses with explanations, the risk score and, for privacy
 policies, the protections found and missing. If the chosen type looks wrong, a warning says so.
 
+The site has six pages, all served by the same app with a shared header and footer
+(`web/static/pages/`, `web/static/partials/`; light and dark themes, works on phones):
+`/` (home), `/analyze` (the analyser: risk gauge, severity tiles, risk by group, filters and
+search, copy / download / print the report), `/how-it-works` (pipeline and all 40 categories,
+from `/taxonomy`), `/models` (test results and live model status), `/extension` (download and
+install the browser extension) and `/about` (privacy, limitations, data licences).
+
 ```bash
 curl -F file=@agreement.pdf http://127.0.0.1:8000/analyze                 # type detected
 curl -F document_type=tos -F "text=<terms.txt" http://127.0.0.1:8000/analyze
@@ -47,7 +54,9 @@ curl -F "text=<page.txt" http://127.0.0.1:8000/detect                       # ju
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /` | web UI |
+| `GET /` | the web site (also `/analyze`, `/how-it-works`, `/models`, `/extension`, `/about`) |
+| `GET /taxonomy` | every category per document type, with severity and risk group |
+| `GET /extension.zip` | the browser extension, zipped for "Load unpacked" |
 | `GET /health` | which modules have a model (503 if none) |
 | `GET /document-types` | the types to choose from |
 | `POST /detect` | `file` or `text` → suggested type, confidence, probabilities (incl. "other") |

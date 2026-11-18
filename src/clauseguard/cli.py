@@ -263,10 +263,19 @@ def serve(
     if preload:
         for module in available_modules():
             try:
-                get_analyzer(module)
+                analyzer = get_analyzer(module)
+                # one tiny prediction, so the first visitor doesn't pay for runtime warm-up
+                analyzer.model.predict_proba(["You agree to these terms by using the service."])
                 console.print(f"loaded {module}")
             except ModelNotAvailableError as exc:
                 console.print(f"[yellow]{module} unavailable:[/] {exc}")
+        from clauseguard.router import get_router
+
+        try:
+            get_router().detect("These terms of service apply to your use of the website. " * 20)
+            console.print("loaded the document-type router")
+        except ModelNotAvailableError as exc:
+            console.print(f"[yellow]router unavailable:[/] {exc}")
     console.print(f"starting ClauseGuard on http://{host}:{port} ...")
     # uvicorn logs "Uvicorn running on ..." once the server actually accepts requests
     uvicorn.run("clauseguard.web.app:app", host=host, port=port, log_level="info")

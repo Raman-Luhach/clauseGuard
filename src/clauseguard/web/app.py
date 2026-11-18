@@ -1,7 +1,9 @@
 """REST API and web UI (FastAPI). Run with `clauseguard serve`.
 
 Endpoints:
-  GET  /                 the web UI
+  GET  /                 the web site (also /analyze, /how-it-works, /models, /extension, /about)
+  GET  /taxonomy         the clause categories of every document type, with their risk groups
+  GET  /extension.zip    the browser extension, zipped (when the extension folder is present)
   GET  /health           which document types have a model loaded or loadable (503 if none)
   GET  /document-types   the types the user can choose from
   POST /detect           multipart form: file or text -> the router's suggested document type
@@ -15,19 +17,23 @@ more origins can be allowed with CLAUSEGUARD_CORS_ORIGINS (comma-separated).
 
 from __future__ import annotations
 
+import io
 import os
 import time
+import zipfile
+from functools import cache
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, File, Form, UploadFile
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from clauseguard import __version__, pipeline
-from clauseguard.config import available_modules, load_module_config
+from clauseguard.config import available_modules, load_module_config, load_taxonomy
 from clauseguard.errors import InputError, ModelNotAvailableError
 from clauseguard.evaluation.robustness import EXAMPLES
 from clauseguard.ingestion.loader import MAX_PDF_BYTES
@@ -38,6 +44,16 @@ from clauseguard.schema import AnalysisResult, CombinedResult
 
 STATIC = Path(__file__).with_name("static")
 EXAMPLES_DIR = _CODE_ROOT / "examples"
+EXTENSION_DIR = _CODE_ROOT / "extension"
+# URL path -> page file in static/pages; each page gets the shared header and footer.
+PAGES = {
+    "/": "home.html",
+    "/analyze": "analyze.html",
+    "/how-it-works": "how-it-works.html",
+    "/models": "models.html",
+    "/extension": "extension.html",
+    "/about": "about.html",
+}
 PUBLIC_FIELDS = ("name", "description", "ready", "model", "unit")
 MODEL_NAMES = {
     "legal-bert": "LEGAL-BERT",
@@ -84,6 +100,51 @@ def _read_input(text: str | None, file: UploadFile | None) -> tuple[str | None, 
     if data.startswith(b"%PDF") or (file.filename or "").lower().endswith(".pdf"):
         return None, data, "pdf"
     return data.decode("utf-8", errors="replace"), None, "text-file"
+
+
+@cache
+def _render_page(name: str) -> str:
+    """A page from static/pages with the shared partials filled in (cached: files are static)."""
+    page = (STATIC / "pages" / name).read_text(encoding="utf-8")
+    for part in ("head", "header", "footer"):
+        page = page.replace(
+            f"<!--#{part}-->", (STATIC / "partials" / f"{part}.html").read_text(encoding="utf-8")
+        )
+    return page.replace("{{version}}", __version__)
+
+
+def _taxonomy() -> dict:
+    tax = load_taxonomy()
+    modules = {}
+    for module in available_modules():
+        cfg = load_module_config(module)
+        labels = [
+            {
+                "id": lid,
+                "name": info.name,
+                "risk_group": info.risk_group,
+                "risk_group_name": tax.risk_groups[info.risk_group].name,
+                "severity": info.severity,
+                "definition": info.definition,
+            }
+            for lid, info in tax.labels.items()
+            if lid.split(":", 1)[0] == module
+        ]
+        modules[module] = {"name": cfg.display_name, "unit": cfg.unit_type, "labels": labels}
+    groups = {k: {"name": g.name, "description": g.description} for k, g in tax.risk_groups.items()}
+    return {"modules": modules, "risk_groups": groups}
+
+
+def _extension_zip() -> bytes | None:
+    if not (EXTENSION_DIR / "manifest.json").is_file():
+        return None
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as z:
+        for path in sorted(EXTENSION_DIR.rglob("*")):
+            rel = path.relative_to(EXTENSION_DIR)
+            if path.is_file() and path.name != ".DS_Store" and rel.parts[0] != "tests":
+                z.write(path, Path("clauseguard-extension") / rel)
+    return buffer.getvalue()
 
 
 def _module_status() -> dict[str, dict]:
@@ -246,9 +307,40 @@ def create_app() -> FastAPI:
             return _error(404, "no_example", "No example for this document type.")
         return PlainTextResponse(path.read_text(encoding="utf-8"))
 
-    @app.get("/", include_in_schema=False)
-    def index() -> FileResponse:
-        return FileResponse(STATIC / "index.html")
+    @app.get("/taxonomy")
+    def taxonomy() -> dict:
+        return _taxonomy()
+
+    @app.api_route("/extension.zip", methods=["GET", "HEAD"], include_in_schema=False)
+    def extension_zip():
+        data = _extension_zip()
+        if data is None:
+            return _error(404, "no_extension", "The extension isn't included in this installation.")
+        return Response(
+            data,
+            media_type="application/zip",
+            headers={"Content-Disposition": 'attachment; filename="clauseguard-extension.zip"'},
+        )
+
+    def page_route(name: str):
+        def page() -> HTMLResponse:
+            return HTMLResponse(_render_page(name))
+
+        return page
+
+    for url, name in PAGES.items():
+        app.add_api_route(url, page_route(name), methods=["GET"], include_in_schema=False)
+
+    @app.exception_handler(StarletteHTTPException)
+    async def not_found(request: Request, exc: StarletteHTTPException):
+        """Browsers get a page for unknown URLs; API clients keep the JSON error."""
+        if exc.status_code == 404 and "text/html" in request.headers.get("accept", ""):
+            return HTMLResponse(_render_page("404.html"), status_code=404)
+        return JSONResponse(
+            {"detail": exc.detail},
+            status_code=exc.status_code,
+            headers=getattr(exc, "headers", None),
+        )
 
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
     return app

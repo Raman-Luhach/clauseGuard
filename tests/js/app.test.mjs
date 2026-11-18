@@ -58,3 +58,37 @@ test("an unsure or unrelated detection selects nothing", () => {
   assert.equal(unrelated.select, null);
   assert.match(unrelated.text, /doesn't look like/);
 });
+
+const { groupBreakdown, verdictText, reportText, wordCount } = require("../../src/clauseguard/web/static/app.js");
+
+const finding = (severity, group, name = "Arbitration") => ({
+  severity, risk_group_name: group, text: "We may terminate.", explanation: "Plain words.",
+  labels: [{ name, score: 0.9 }],
+});
+
+test("risk groups count only risky flags, largest first", () => {
+  const groups = groupBreakdown([finding("high", "Legal risk"), finding("low", "Legal risk"),
+    finding("medium", "Personal data"), finding("protective", "Protective")]);
+  assert.deepEqual(groups.map(([name, g]) => [name, g.total, g.high]),
+    [["Legal risk", 2, 1], ["Personal data", 1, 0]]);
+});
+
+test("the verdict reflects the band and the main risk group", () => {
+  const high = verdictText({ risk_band: "high", findings: [finding("high", "Legal risk")] });
+  assert.match(high, /More aggressive than most/);
+  assert.match(high, /1 high-severity clause\./);
+  assert.match(high, /legal risk/);
+  assert.match(verdictText({ risk_band: "low", findings: [] }), /didn't flag any risky clauses/);
+});
+
+test("the copied summary lists the most severe flags first", () => {
+  const text = reportText({ document_type_name: "Terms of Service", risk_score: 61.4, risk_band: "medium",
+    n_words: 1200, findings: [finding("low", "Legal risk", "Choice of law"), finding("high", "Legal risk")] });
+  assert.match(text, /Risk score 61\/100 \(medium\)/);
+  assert.ok(text.indexOf("[High] Arbitration") < text.indexOf("[Low] Choice of law"));
+});
+
+test("word count", () => {
+  assert.equal(wordCount("  one two\nthree  "), 3);
+  assert.equal(wordCount("   "), 0);
+});

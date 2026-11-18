@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!--#head-->
+  <title>Models &amp; accuracy · ClauseGuard</title>
+  <meta name="description" content="Which models ClauseGuard uses, how they were evaluated, and how accurate they are.">
+</head>
+<body>
+<!--#header-->
+<main id="main">
+  <header class="page-head">
+    <div class="wrap">
+      <p class="crumbs"><a href="/">Home</a> / Models &amp; accuracy</p>
+      <span class="eyebrow">Models &amp; accuracy</span>
+      <h1>Measured honestly, on documents the models never saw.</h1>
+      <p class="lead">Every number on this page comes from a held-out test split that was used once, at the end, after every design decision had been made on validation data.</p>
+    </div>
+  </header>
+
+  <section class="section-tight">
+    <div class="wrap">
+      <div class="grid grid-3" id="model-cards">
+        <article class="card metric-card" data-module="tos">
+          <h3>Terms of Service <span class="status-dot" data-status>…</span></h3>
+          <p class="model-name" data-model>LEGAL-BERT · sentence level</p>
+          <div class="meters">
+            <div class="meter"><div><span>Risky clauses caught (recall)</span><b>87.2%</b></div><div class="track"><div class="fill" style="width:87.2%"></div><div class="target" style="left:85%" title="Target 85%"></div></div></div>
+            <div class="meter"><div><span>Flags that are correct (precision)</span><b>78.1%</b></div><div class="track"><div class="fill" style="width:78.1%"></div><div class="target" style="left:70%" title="Target 70%"></div></div></div>
+            <div class="meter"><div><span>Per-category F1 (macro)</span><b>0.770</b></div><div class="track"><div class="fill" style="width:77%"></div></div></div>
+          </div>
+        </article>
+        <article class="card metric-card" data-module="privacy">
+          <h3>Privacy Policy <span class="status-dot" data-status>…</span></h3>
+          <p class="model-name" data-model>PrivBERT · paragraph level</p>
+          <div class="meters">
+            <div class="meter"><div><span>Risky practices caught (recall)</span><b>93.5%</b></div><div class="track"><div class="fill" style="width:93.5%"></div><div class="target" style="left:85%" title="Target 85%"></div></div></div>
+            <div class="meter"><div><span>Flags that are correct (precision)</span><b>91.2%</b></div><div class="track"><div class="fill" style="width:91.2%"></div><div class="target" style="left:70%" title="Target 70%"></div></div></div>
+            <div class="meter"><div><span>Per-category F1 (macro)</span><b>0.769</b></div><div class="track"><div class="fill" style="width:76.9%"></div></div></div>
+          </div>
+        </article>
+        <article class="card metric-card" data-module="contract">
+          <h3>Contract <span class="status-dot" data-status>…</span></h3>
+          <p class="model-name" data-model>LEGAL-BERT · sentence level</p>
+          <div class="meters">
+            <div class="meter"><div><span>Risky clauses caught (recall)</span><b>66.4%</b></div><div class="track"><div class="fill" style="width:66.4%;background:var(--medium)"></div><div class="target" style="left:85%" title="Target 85%"></div></div></div>
+            <div class="meter"><div><span>Flags that are correct (precision)</span><b>70.3%</b></div><div class="track"><div class="fill" style="width:70.3%"></div><div class="target" style="left:70%" title="Target 70%"></div></div></div>
+            <div class="meter"><div><span>Per-category F1 (macro)</span><b>0.625</b></div><div class="track"><div class="fill" style="width:62.5%"></div></div></div>
+          </div>
+        </article>
+      </div>
+      <p class="small muted" style="margin-top:14px">The dark tick on each bar is the project's target: catch at least 85% of risky clauses while at least 70% of flags are correct. Status dots are live from this server.</p>
+    </div>
+  </section>
+
+  <div class="wrap section" style="padding-top:40px">
+    <div class="layout-side">
+      <nav class="toc" aria-label="On this page">
+        <p>On this page</p>
+        <ol>
+          <li><a href="#results">Full results</a></li>
+          <li><a href="#metrics">Reading the numbers</a></li>
+          <li><a href="#experiments">What was tried</a></li>
+          <li><a href="#speed">Speed</a></li>
+          <li><a href="#detector">Type detector</a></li>
+        </ol>
+      </nav>
+      <div class="prose" style="max-width:none">
+        <section id="results">
+          <h2>Full test results</h2>
+          <p>Each served model next to the simplest reasonable alternative, a keyword-based TF-IDF classifier trained on the same data.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Document type</th><th>Model</th><th class="num">Macro F1</th><th class="num">Recall</th><th class="num">Precision</th><th class="num">Document-level F1</th></tr></thead>
+              <tbody>
+                <tr><td><strong>Terms of Service</strong></td><td>LEGAL-BERT</td><td class="num"><strong>0.770</strong></td><td class="num"><strong>0.872</strong></td><td class="num">0.781</td><td class="num">0.976</td></tr>
+                <tr><td></td><td class="muted">TF-IDF baseline</td><td class="num muted">0.747</td><td class="num muted">0.837</td><td class="num muted">0.791</td><td class="num muted">0.958</td></tr>
+                <tr><td><strong>Privacy Policy</strong></td><td>PrivBERT</td><td class="num"><strong>0.769</strong></td><td class="num"><strong>0.935</strong></td><td class="num">0.912</td><td class="num">0.934</td></tr>
+                <tr><td></td><td class="muted">TF-IDF baseline</td><td class="num muted">0.734</td><td class="num muted">0.874</td><td class="num muted">0.884</td><td class="num muted">0.921</td></tr>
+                <tr><td><strong>Contract</strong></td><td>LEGAL-BERT</td><td class="num"><strong>0.625</strong></td><td class="num"><strong>0.664</strong></td><td class="num">0.703</td><td class="num">0.820</td></tr>
+                <tr><td></td><td class="muted">TF-IDF baseline</td><td class="num muted">0.553</td><td class="num muted">0.566</td><td class="num muted">0.680</td><td class="num muted">0.765</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="small muted">Test splits: UNFAIR-ToS (LexGLUE split), OPP-115 and CUAD (document-level splits, so no document appears in both training and test). Evaluated November 2026.</p>
+        </section>
+
+        <section id="metrics">
+          <h2>Reading the numbers</h2>
+          <ul>
+            <li><strong>Recall</strong>: of the sentences or paragraphs that contain any risky clause, the share ClauseGuard flags. This is the number that matters most: a missed clause is the costliest mistake.</li>
+            <li><strong>Precision</strong>: of the flags ClauseGuard raises, the share that annotators also marked.</li>
+            <li><strong>Macro F1</strong>: the balance of precision and recall, averaged over categories, so rare categories count as much as common ones.</li>
+            <li><strong>Document-level F1</strong>: whether each category is found anywhere in the document, which is what a reader usually wants to know.</li>
+          </ul>
+          <div class="callout warn"><strong>Contracts are the hardest case.</strong> CUAD's annotations aren't exhaustive: real clauses that were repeated, or sat in attachments, were often left unmarked, and the model is penalised for finding them. Training a different encoder, adding twice as much data and oversampling rare clause types all ended at the same recall, so reaching 85% would need better annotations rather than more training.</div>
+        </section>
+
+        <section id="experiments">
+          <h2>What was tried</h2>
+          <p>The served models come from the first GPU session (DistilBERT, LEGAL-BERT and PrivBERT). A second session trained 17 more candidates to try to beat them; each was compared on validation data only, and none did, so the originals stay in service.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Candidate</th><th class="num">ToS</th><th class="num">Privacy</th><th class="num">Contract</th></tr></thead>
+              <tbody>
+                <tr><td><strong>Domain BERT (served)</strong>: LEGAL-BERT / PrivBERT</td><td class="num"><strong>0.765</strong></td><td class="num"><strong>0.846</strong></td><td class="num"><strong>0.708</strong></td></tr>
+                <tr><td>Domain BERT + oversampled rare categories</td><td class="num">0.687</td><td class="num">0.832</td><td class="num">0.698</td></tr>
+                <tr><td>DeBERTa-v3 (3 seeds)</td><td class="num">0.756</td><td class="num">0.834</td><td class="num">0.668</td></tr>
+                <tr><td>DeBERTa-v3 + oversampling</td><td class="num">0.754</td><td class="num">0.830</td><td class="num">0.659</td></tr>
+                <tr><td>One joint model for all three types</td><td class="num">0.743</td><td class="num">0.757</td><td class="num">0.690</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="small muted">Validation macro F1. Contract candidates in the second session were trained on more sentences (8 unlabelled per labelled); the served contract model was rescored on the same, cleaned sentences.</p>
+        </section>
+
+        <section id="speed">
+          <h2>Speed</h2>
+          <p>Median time for a 5,000-word document on a laptop CPU (Apple M2, 8 GB), with no GPU:</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Document type</th><th class="num">500 words</th><th class="num">5,000 words</th></tr></thead>
+              <tbody>
+                <tr><td>Terms of Service</td><td class="num">0.5 s</td><td class="num">4.9 s</td></tr>
+                <tr><td>Contract</td><td class="num">1.2 s</td><td class="num">5.8 s</td></tr>
+                <tr><td>Privacy Policy</td><td class="num">0.6 s</td><td class="num">12.3 s</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Models run through ONNX Runtime. Terms and contracts are screened first by the fast keyword model, so the transformer reads only the sentences that might be flagged; privacy policies can't be screened because nearly every paragraph carries some category.</p>
+        </section>
+
+        <section id="detector">
+          <h2>Document-type detector</h2>
+          <p>A TF-IDF and logistic regression model over windows of each document, trained on all three datasets plus news (AG News) and encyclopedia text (WikiText) as examples of unrelated text.</p>
+          <ul>
+            <li>Full test documents: <strong>100%</strong> correct.</li>
+            <li>Excerpts of 100–200 words: <strong>99.4%</strong> correct.</li>
+            <li>Unrelated texts in the test set (news, encyclopedia articles): never confidently labelled as a legal document.</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+</main>
+<!--#footer-->
+<script src="/static/pages.js?v={{version}}"></script>
+</body>
+</html>

@@ -116,10 +116,53 @@ def test_repeat_analysis_is_served_from_cache(trained_tos, client):
 
 
 def test_ui_is_served(client):
-    page = client.get("/")
+    page = client.get("/analyze")
     assert page.status_code == 200 and "What kind of document is this?" in page.text
-    for asset in ("/static/app.js", "/static/style.css"):
+    for asset in (
+        "/static/app.js",
+        "/static/style.css",
+        "/static/site.js",
+        "/static/pages.js",
+        "/static/favicon.svg",
+    ):
         assert client.get(asset).status_code == 200
+
+
+@pytest.mark.parametrize(
+    "url", ["/", "/analyze", "/how-it-works", "/models", "/extension", "/about"]
+)
+def test_site_pages_have_shared_layout(client, url):
+    page = client.get(url)
+    assert page.status_code == 200
+    text = page.text
+    assert "<!--#" not in text and "{{version}}" not in text  # partials filled in
+    assert 'id="nav"' in text and 'class="footer"' in text and "<title>" in text
+
+
+def test_unknown_page_is_a_404_page_for_browsers_and_json_for_api(client):
+    page = client.get("/no-such-page", headers={"accept": "text/html"})
+    assert page.status_code == 404 and "This page doesn't exist." in page.text
+    api = client.get("/no-such-page", headers={"accept": "application/json"})
+    assert api.status_code == 404 and api.json() == {"detail": "Not Found"}
+
+
+def test_taxonomy_lists_every_label(client):
+    tax = client.get("/taxonomy").json()
+    assert set(tax["modules"]) == {"tos", "privacy", "contract"}
+    assert sum(len(m["labels"]) for m in tax["modules"].values()) == 40
+    label = tax["modules"]["tos"]["labels"][0]
+    assert {"id", "name", "severity", "risk_group_name", "definition"} <= set(label)
+
+
+def test_extension_download(client):
+    import io
+    import zipfile
+
+    response = client.get("/extension.zip")
+    assert response.status_code == 200
+    names = zipfile.ZipFile(io.BytesIO(response.content)).namelist()
+    assert "clauseguard-extension/manifest.json" in names
+    assert not any(n.endswith(".DS_Store") for n in names)
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js not installed")

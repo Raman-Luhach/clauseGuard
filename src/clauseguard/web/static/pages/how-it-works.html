@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!--#head-->
+  <title>How it works · ClauseGuard</title>
+  <meta name="description" content="How ClauseGuard reads a document, finds risky clauses, scores them and explains them.">
+</head>
+<body>
+<!--#header-->
+<main id="main">
+  <header class="page-head">
+    <div class="wrap">
+      <p class="crumbs"><a href="/">Home</a> / How it works</p>
+      <span class="eyebrow">How it works</span>
+      <h1>From a long document to the clauses that matter.</h1>
+      <p class="lead">ClauseGuard combines a document-type detector, three specialised classifiers and a scoring step. Here is what happens to your document, step by step.</p>
+    </div>
+  </header>
+
+  <div class="wrap section">
+    <div class="layout-side">
+      <nav class="toc" aria-label="On this page">
+        <p>On this page</p>
+        <ol>
+          <li><a href="#pipeline">The pipeline</a></li>
+          <li><a href="#detect">Detecting the type</a></li>
+          <li><a href="#classify">Finding risky clauses</a></li>
+          <li><a href="#score">The risk score</a></li>
+          <li><a href="#explain">Explanations</a></li>
+          <li><a href="#categories">What it looks for</a></li>
+        </ol>
+      </nav>
+
+      <div>
+        <section class="prose" id="pipeline" style="max-width:none">
+          <h2>The pipeline</h2>
+          <p>Every document goes through the same six steps. On an ordinary laptop the whole thing takes about five seconds for a 5,000-word terms of service or contract.</p>
+          <div class="flow">
+            <div><b>Read</b><span>PDF text with page numbers, or plain text</span></div>
+            <div><b>Clean</b><span>Fix line breaks, hyphenation and spacing</span></div>
+            <div><b>Split</b><span>Sentences, or paragraphs for privacy policies</span></div>
+            <div><b>Classify</b><span>A fine-tuned transformer for the document type</span></div>
+            <div><b>Score</b><span>Severity-weighted, compared with similar documents</span></div>
+            <div><b>Explain</b><span>A plain-language note for every flag</span></div>
+          </div>
+        </section>
+
+        <section class="prose" id="detect">
+          <h2>Detecting the document type</h2>
+          <p>Before anything is classified, a small, fast model reads the text and suggests whether it is a terms of service, a privacy policy or a contract. It was trained on full documents from all three datasets, plus news and encyclopedia text as examples of what is <em>none</em> of them.</p>
+          <p>The suggestion is only a suggestion: it pre-selects the type, and you can always change it. If the detector is unsure (below 60% confidence) or the text looks unrelated, ClauseGuard asks you to choose instead of guessing.</p>
+          <div class="callout">On held-out test documents the detector picks the right type for 100% of full documents and 99.4% of short excerpts of 100–200 words.</div>
+        </section>
+
+        <section class="prose" id="classify">
+          <h2>Finding risky clauses</h2>
+          <p>Each document type has its own model, trained at the level its dataset was annotated: terms of service and contracts sentence by sentence, privacy policies paragraph by paragraph. A clause can match more than one category.</p>
+          <ul>
+            <li><strong>Terms of service:</strong> LEGAL-BERT, a BERT model pre-trained on legal text, fine-tuned on UNFAIR-ToS (50 terms of service annotated by legal experts).</li>
+            <li><strong>Privacy policies:</strong> PrivBERT, pre-trained on privacy policies, fine-tuned on OPP-115 (115 policies annotated by law students).</li>
+            <li><strong>Contracts:</strong> LEGAL-BERT fine-tuned on CUAD (510 commercial contracts annotated under the supervision of experienced lawyers), on 19 of the clause types lawyers check first.</li>
+          </ul>
+          <p>Each category has its own decision threshold, tuned on validation data. For terms of service and contracts the thresholds favour <em>recall</em>: missing a risky clause costs you more than reading one extra flag.</p>
+          <p>To stay fast, a lightweight keyword model first screens every sentence; the transformer reads only those with some chance of a flag. On validation data this keeps more than 99% of the transformer's own flags while reading about 35–45% of the sentences.</p>
+        </section>
+
+        <section class="prose" id="score">
+          <h2>The risk score</h2>
+          <p>Every category has a severity: <span class="badge sev-high">High</span> <span class="badge sev-medium">Medium</span> <span class="badge sev-low">Low</span>. Each risky category found counts once, weighted by its severity and by how confident the model is, so a long document isn't penalised for repeating itself. Clauses that work in your favour are shown as <span class="badge sev-protective">Protective</span> and add nothing to the score. The result is calibrated so that a typical document of the same type scores 50.</p>
+          <ul>
+            <li><strong>0–33, low:</strong> milder than most documents of its kind.</li>
+            <li><strong>34–66, medium:</strong> typical; read the high-severity flags.</li>
+            <li><strong>67–100, high:</strong> more aggressive than most; read carefully before agreeing.</li>
+          </ul>
+          <p>For privacy policies, ClauseGuard also lists the protections the policy contains, such as how to access or delete your data, and the ones it does not mention; missing protections raise the score.</p>
+        </section>
+
+        <section class="prose" id="explain">
+          <h2>Explanations</h2>
+          <p>Every category comes with a plain-language explanation of what such a clause usually means for you. In privacy policies, negations are taken into account: “we do <em>not</em> sell your personal information” is recognised as a reassurance and given a lower severity. A server can optionally use Claude to tailor the explanation to the exact clause; only the flagged clause is sent, never the whole document.</p>
+        </section>
+
+        <section id="categories">
+          <h2 style="margin-bottom:10px">What it looks for</h2>
+          <p class="muted" style="margin-bottom:22px">All 40 categories, with the severity ClauseGuard gives them.</p>
+          <div class="cat-tabs" role="tablist" id="cat-tabs"></div>
+          <div class="cats" id="cats"><p class="muted">Loading categories…</p></div>
+        </section>
+      </div>
+    </div>
+  </div>
+</main>
+<!--#footer-->
+<script src="/static/pages.js?v={{version}}"></script>
+</body>
+</html>

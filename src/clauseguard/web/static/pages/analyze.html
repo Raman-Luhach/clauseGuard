@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!--#head-->
+  <title>Analyse a document · ClauseGuard</title>
+  <meta name="description" content="Upload or paste a terms of service, privacy policy or contract and see its risky clauses highlighted and explained.">
+</head>
+<body>
+<!--#header-->
+<main id="main" class="tool">
+  <div class="wrap">
+    <div class="tool-head">
+      <div>
+        <h1>Analyse a document</h1>
+        <p>Find the clauses that could work against you before you sign or click “I agree”.</p>
+      </div>
+      <a class="btn btn-ghost btn-sm" href="/about#privacy"><svg aria-hidden="true"><use href="#i-lock"/></svg>Your document is never stored</a>
+    </div>
+
+    <div class="panel" id="input-panel">
+      <section class="panel-section" aria-labelledby="step-type-title">
+        <div class="panel-title">
+          <span class="num-badge">1</span>
+          <h2 id="step-type-title">What kind of document is this?</h2>
+          <span class="aside">Suggested automatically</span>
+        </div>
+        <div id="types" class="types" role="radiogroup" aria-labelledby="step-type-title">
+          <div class="type skeleton"></div><div class="type skeleton"></div><div class="type skeleton"></div>
+        </div>
+        <p id="detect-hint" class="detect-hint" role="status" aria-live="polite"><svg aria-hidden="true"><use href="#i-info"/></svg><span>Add the document below and ClauseGuard will suggest its type. You can always change it.</span></p>
+      </section>
+
+      <section class="panel-section" aria-labelledby="step-input-title">
+        <div class="panel-title">
+          <span class="num-badge">2</span>
+          <h2 id="step-input-title">Add the document</h2>
+        </div>
+        <div class="seg" role="tablist" aria-label="How to add the document">
+          <button type="button" role="tab" id="tab-file" aria-selected="true" aria-controls="pane-file"><svg aria-hidden="true"><use href="#i-upload"/></svg>Upload a file</button>
+          <button type="button" role="tab" id="tab-text" aria-selected="false" aria-controls="pane-text"><svg aria-hidden="true"><use href="#i-text"/></svg>Paste text</button>
+        </div>
+        <div id="pane-file" role="tabpanel" aria-labelledby="tab-file">
+          <label id="drop" class="drop" for="file">
+            <input type="file" id="file" accept=".pdf,.txt,.md,application/pdf,text/plain">
+            <span class="doc-icon"><svg aria-hidden="true"><use href="#i-upload"/></svg></span>
+            <span id="drop-label"><strong>Drop a PDF or text file here</strong><br>or <u>choose a file</u> · up to 20 MB</span>
+          </label>
+        </div>
+        <div id="pane-text" role="tabpanel" aria-labelledby="tab-text" hidden>
+          <div class="textarea-wrap">
+            <label for="text" class="sr-only">Document text</label>
+            <textarea id="text" rows="10" placeholder="Paste the full document here…"></textarea>
+            <span class="counter" id="word-count">0 words</span>
+          </div>
+        </div>
+        <div class="examples" id="examples">
+          <span>Or try an example:</span>
+          <button type="button" data-example="tos">GitHub Terms of Service</button>
+          <button type="button" data-example="privacy">GitHub Privacy Statement</button>
+          <button type="button" data-example="contract">A supply agreement (CUAD)</button>
+        </div>
+      </section>
+
+      <section class="panel-section">
+        <div class="actions">
+          <button type="button" id="analyze" class="btn btn-primary btn-lg" disabled>Analyse document <svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
+          <button type="button" id="reset" class="btn btn-ghost" hidden><svg aria-hidden="true"><use href="#i-refresh"/></svg>Start over</button>
+          <span id="status" role="status" aria-live="polite"></span>
+          <span class="hint-keys"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to analyse</span>
+        </div>
+        <div class="progress" id="workflow" hidden aria-label="Progress">
+          <ol id="pipeline" class="pipeline"></ol>
+        </div>
+      </section>
+    </div>
+
+    <section id="results" class="results" hidden aria-labelledby="results-title">
+      <div class="panel report-head">
+        <div class="gauge" id="gauge" title="0–100: how risky this document is compared with typical documents of its type">
+          <svg viewBox="0 0 148 148" aria-hidden="true">
+            <circle class="track" cx="74" cy="74" r="62" fill="none" stroke-width="12"/>
+            <circle class="bar" id="gauge-bar" cx="74" cy="74" r="62" fill="none" stroke-width="12" stroke-linecap="round" stroke-dasharray="389.6" stroke-dashoffset="389.6"/>
+          </svg>
+          <div class="val"><strong id="score-value">–</strong><span id="score-band">risk</span></div>
+        </div>
+        <div class="report-meta">
+          <span class="eyebrow" id="report-type">Risk report</span>
+          <h2 id="results-title">Risk report</h2>
+          <p id="summary-line"></p>
+          <p class="verdict" id="verdict"></p>
+          <ul id="warnings" class="warnings"></ul>
+        </div>
+        <div class="report-actions">
+          <button type="button" class="btn btn-secondary btn-sm" id="copy-report"><svg aria-hidden="true"><use href="#i-copy"/></svg>Copy summary</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="download-report"><svg aria-hidden="true"><use href="#i-download"/></svg>Download (JSON)</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="print-report"><svg aria-hidden="true"><use href="#i-print"/></svg>Print or save PDF</button>
+        </div>
+      </div>
+
+      <div class="tiles" id="tiles"></div>
+
+      <div class="two-col">
+        <div class="card">
+          <h3 class="card-title">Where the risk is</h3>
+          <div class="bars" id="group-bars"></div>
+        </div>
+        <div class="card" id="protections-card">
+          <h3 class="card-title" id="protections-title">Protections in this policy</h3>
+          <ul id="protections-list" class="protections"></ul>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <span class="label">Show</span>
+        <div class="chips" id="filters" role="group" aria-label="Filter by severity"></div>
+        <label class="search"><span class="sr-only">Search flagged clauses</span><svg aria-hidden="true"><use href="#i-search"/></svg><input type="search" id="search" placeholder="Search flagged clauses"></label>
+      </div>
+
+      <div class="columns">
+        <article class="panel doc-pane" aria-label="Your document">
+          <div class="pane-head"><h3>Your document</h3><span>Click a highlight to see why it was flagged</span></div>
+          <div id="document" class="doc-text"></div>
+        </article>
+        <aside class="panel findings-pane" aria-label="Flagged clauses">
+          <div class="pane-head"><h3>Flagged clauses</h3><span id="findings-count"></span></div>
+          <ol id="findings" class="finding-list"></ol>
+        </aside>
+      </div>
+    </section>
+  </div>
+</main>
+<!--#footer-->
+<script src="/static/app.js?v={{version}}"></script>
+</body>
+</html>

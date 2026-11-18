@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!--#head-->
+  <title>ClauseGuard: know what you're agreeing to</title>
+  <meta name="description" content="ClauseGuard reads terms of service, privacy policies and contracts, highlights the clauses that could work against you, and explains them in plain language.">
+</head>
+<body>
+<!--#header-->
+<main id="main">
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="pill"><b>NEW</b> Detects the document type for you, and now works on any web page</span>
+        <h1>Know what you're agreeing to <em>before</em> you agree to it.</h1>
+        <p class="lead">ClauseGuard reads terms of service, privacy policies and contracts, highlights the clauses that could work against you, and explains each one in plain language. It takes seconds.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary btn-lg" href="/analyze">Analyse a document <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          <a class="btn btn-secondary btn-lg" href="/how-it-works">See how it works</a>
+        </div>
+        <div class="hero-note">
+          <span><svg aria-hidden="true"><use href="#i-check-circle"/></svg>Free, no sign-up</span>
+          <span><svg aria-hidden="true"><use href="#i-check-circle"/></svg>Documents never stored</span>
+          <span><svg aria-hidden="true"><use href="#i-check-circle"/></svg>PDF or pasted text</span>
+        </div>
+      </div>
+
+      <div class="mock" aria-hidden="true">
+        <div class="mock-card">
+          <div class="mock-bar"><i></i><i></i><i></i><span>Risk report · Terms of Service</span></div>
+          <div class="mock-body">
+            <div class="mock-head">
+              <svg width="76" height="76" viewBox="0 0 76 76" style="transform:rotate(-90deg)">
+                <circle cx="38" cy="38" r="31" fill="none" stroke="var(--bg-tint)" stroke-width="8"/>
+                <circle cx="38" cy="38" r="31" fill="none" stroke="var(--medium)" stroke-width="8" stroke-linecap="round" stroke-dasharray="194.8" stroke-dashoffset="103"/>
+              </svg>
+              <div>
+                <h4>Medium risk · 47 / 100</h4>
+                <p>7,518 words · 23 flagged clauses · 4.9 s</p>
+                <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+                  <span class="badge sev-high">11 high</span><span class="badge sev-medium">7 medium</span><span class="badge sev-low">5 low</span>
+                </div>
+              </div>
+            </div>
+            <div class="mock-doc">
+              We may modify these Terms at any time. <mark class="sev-high">We will not be liable for damages or losses arising from your use of the Service.</mark> You may cancel at any time. <mark class="sev-medium">Any dispute will be resolved by binding arbitration</mark> in San Francisco, and <mark class="sev-low">these Terms are governed by the laws of California.</mark>
+            </div>
+          </div>
+        </div>
+        <div class="mock-float">
+          <span class="badge sev-high">High</span> <strong style="font-size:.9rem;margin-left:4px">Limitation of liability</strong>
+          <p>If something goes wrong because of the service, the company says it is not responsible, or that it will pay you only a limited amount.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-tight">
+    <div class="wrap">
+      <div class="stats reveal">
+        <div><strong>3</strong><span>document types, each with its own model</span></div>
+        <div><strong>40</strong><span>clause categories checked</span></div>
+        <div><strong>87%</strong><span>of risky terms-of-service clauses caught on held-out test data</span></div>
+        <div><strong>~5 s</strong><span>for a 5,000-word document, on an ordinary laptop</span></div>
+      </div>
+      <p class="datasets">Trained on expert-annotated research datasets: <b>UNFAIR-ToS</b> <b>OPP-115</b> <b>CUAD</b></p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">What it reads</span>
+        <h2>Three kinds of documents people sign without reading.</h2>
+        <p>Each type has its own model, trained on documents annotated by legal experts, so a contract is judged as a contract and a privacy policy as a privacy policy.</p>
+      </div>
+      <div class="grid grid-3">
+        <article class="card doc-card reveal">
+          <div class="doc-icon"><svg aria-hidden="true"><use href="#i-tos"/></svg></div>
+          <h3>Terms of Service</h3>
+          <p>The rules of apps, websites and online services, checked sentence by sentence.</p>
+          <ul>
+            <li>Limits on the company's liability</li>
+            <li>Accounts closed or terms changed at will</li>
+            <li>Forced arbitration and foreign courts</li>
+          </ul>
+          <div class="foot"><span>8 categories</span><a href="/analyze?type=tos">Analyse terms →</a></div>
+        </article>
+        <article class="card doc-card reveal">
+          <div class="doc-icon"><svg aria-hidden="true"><use href="#i-privacy"/></svg></div>
+          <h3>Privacy Policies</h3>
+          <p>What happens to your data, checked paragraph by paragraph, including what is missing.</p>
+          <ul>
+            <li>Sharing with third parties and advertisers</li>
+            <li>How long data is kept, and your choices</li>
+            <li>Protections the policy promises, or doesn't</li>
+          </ul>
+          <div class="foot"><span>13 categories</span><a href="/analyze?type=privacy">Analyse a policy →</a></div>
+        </article>
+        <article class="card doc-card reveal">
+          <div class="doc-icon"><svg aria-hidden="true"><use href="#i-contract"/></svg></div>
+          <h3>Contracts</h3>
+          <p>Service, supply, licence and freelance agreements, with the clause types lawyers look for first.</p>
+          <ul>
+            <li>Exclusivity, non-compete and lock-ins</li>
+            <li>Uncapped liability and auto-renewal</li>
+            <li>Termination and change-of-control terms</li>
+          </ul>
+          <div class="foot"><span>19 categories</span><a href="/analyze?type=contract">Analyse a contract →</a></div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">How it works</span>
+        <h2>From a long document to a short list of what matters.</h2>
+      </div>
+      <ol class="steps steps-wrap reveal">
+        <li><h3>Add the document</h3><p>Upload a PDF or text file, or paste the text. ClauseGuard suggests what kind of document it is; you can change it.</p></li>
+        <li><h3>It is read in pieces</h3><p>The text is cleaned and split into sentences or paragraphs: the same units the model was trained on.</p></li>
+        <li><h3>Each piece is classified</h3><p>A transformer model fine-tuned for that document type flags the clauses that match a known risk category.</p></li>
+        <li><h3>You get a clear report</h3><p>A 0–100 risk score, the flagged clauses highlighted in the text, and a plain-language explanation of each.</p></li>
+      </ol>
+      <p class="reveal" style="margin-top:36px"><a class="btn btn-secondary" href="/how-it-works">Read the details <svg aria-hidden="true"><use href="#i-arrow"/></svg></a></p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">Why ClauseGuard</span>
+        <h2>Built to be useful, honest and private.</h2>
+      </div>
+      <div class="grid grid-3">
+        <div class="feature reveal"><div class="doc-icon"><svg aria-hidden="true"><use href="#i-highlight"/></svg></div><h3>Highlights in context</h3><p>Every flag is marked in the document itself, so you can read the surrounding text before you decide.</p></div>
+        <div class="feature reveal"><div class="doc-icon"><svg aria-hidden="true"><use href="#i-chat"/></svg></div><h3>Plain-language explanations</h3><p>Each flag says what the clause means for you, without legal jargon, and how sure the model is.</p></div>
+        <div class="feature reveal"><div class="doc-icon"><svg aria-hidden="true"><use href="#i-gauge"/></svg></div><h3>A risk score you can compare</h3><p>The score places the document against typical documents of its type, from 0 (mild) to 100 (aggressive).</p></div>
+        <div class="feature reveal"><div class="doc-icon"><svg aria-hidden="true"><use href="#i-scan"/></svg></div><h3>Detects the document type</h3><p>A separate model recognises terms, privacy policies and contracts, and tells you when a text is none of them.</p></div>
+        <div class="feature reveal"><div class="doc-icon"><svg aria-hidden="true"><use href="#i-puzzle"/></svg></div><h3>Works on any web page</h3><p>The browser extension highlights risky clauses directly on the page you are reading, with explanations on hover.</p></div>
+        <div class="feature reveal"><div class="doc-icon"><svg aria-hidden="true"><use href="#i-lock"/></svg></div><h3>Private by design</h3><p>Documents are analysed in memory and never stored. Only counts and timings are logged, never your text.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-tight" style="padding-bottom:88px">
+    <div class="wrap">
+      <div class="cta-band reveal">
+        <div>
+          <h2>Have a document open right now?</h2>
+          <p>Paste it in and see its riskiest clauses in a few seconds. Or try one of the examples: real terms, a real privacy policy and a real contract.</p>
+        </div>
+        <div class="actions">
+          <a class="btn btn-primary btn-lg" href="/analyze">Analyse a document</a>
+          <a class="btn btn-ghost btn-lg" href="/analyze?example=tos">Try an example</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<!--#footer-->
+</body>
+</html>
