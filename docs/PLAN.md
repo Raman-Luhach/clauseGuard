@@ -345,15 +345,21 @@ against a 0.85 target; ToS and contract latency just over 10 s per 5,000 words).
      contract training sentences; candidates per module in `gpu_candidates`
      (`docs/TRAINING.md`). `clauseguard results import` then serves, per module, the better of
      the current and the new model on validation.
+     *Outcome (18 November 2026, A100, 3 h 15 min):* no candidate beat the served models on
+     validation (ToS 0.760 vs 0.765, privacy 0.838 vs 0.846, contract 0.706 vs 0.708 macro-F1),
+     so all three stay served. Contract recall stays near 0.66-0.68 on test whatever the encoder,
+     oversampling or amount of unlabelled sentences: the limit is the data, not the training.
 3. **Joint model** (`clauseguard joint train`, an experiment): one encoder over the sentences of
    all three modules with a loss mask (each sentence only teaches its own dataset's labels),
    compared per module with the specialists; privacy is also compared per segment.
+   *Outcome:* close to the specialists on ToS and contracts (test macro-F1 0.761 vs 0.770,
+   0.620 vs 0.625), clearly worse on privacy (0.720 vs 0.769); the specialists stay served.
 4. **Combined analysis**: `POST /analyze-combined` / `analyze --type all` runs several analyzers
    on one document.
 5. **Latency**: TF-IDF screening (the transformer reads only the 35-45% of sentences the fast
    model gives some chance of a label, keeping >= 99% of its flags) and batching by token length:
-   a 5,000-word document now takes 4.5 s (ToS) and 5.3 s (contract) on the Mac instead of 17-19 s;
-   privacy, which can't be screened, 11 s.
+   a 5,000-word document now takes about 5 s (ToS) and 5.8 s (contract) on the Mac instead of 17-19 s;
+   privacy, which can't be screened, about 12 s.
 6. **Browser extension** (`extension/`, `docs/EXTENSION.md`): highlights flagged clauses on any
    web page, with explanations on hover; type suggested by the router; right-click analysis of
    a selection; works with the local server or the deployed Space (CORS enabled for extensions).

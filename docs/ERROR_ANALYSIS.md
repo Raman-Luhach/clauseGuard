@@ -147,3 +147,38 @@ measured on Kaggle's CPU). Two changes, neither of which changes any prediction:
 See `reports/generated/<module>_benchmark.md` for the measured times. ONNX Runtime's transformer
 graph optimizer was also tried: no gain (the export pattern prevents attention fusion), so it is
 only kept when it measures faster.
+
+## Outcome of GPU session 2 (18 November 2026)
+
+Run on one A100 (40 GB) in 3 h 15 min. Every candidate was compared with the served model on
+validation macro-F1 (`clauseguard results import`); none beat it, so the served models are
+unchanged. Full tables: `reports/generated/final_results.md`, `joint_results.md`.
+
+| Module | Served (kept) | Best new candidate | Other candidates |
+|---|---|---|---|
+| ToS | LEGAL-BERT, F2 thresholds: 0.765 | DeBERTa-v3: 0.756 ± 0.006 (3 seeds) | DeBERTa-v3 + oversampling 0.754, LEGAL-BERT + oversampling 0.687 |
+| Privacy | PrivBERT: 0.846 | DeBERTa-v3: 0.834 ± 0.004 (3 seeds) | PrivBERT + oversampling 0.832, DeBERTa-v3 + oversampling 0.830 |
+| Contract | LEGAL-BERT (old sentences, re-scored, F-1.25): 0.708 | LEGAL-BERT, 8 unlabelled per labelled: 0.701 ± 0.006 (3 seeds) | + oversampling 0.698, DeBERTa-v3 0.668, DeBERTa-v3 + oversampling 0.659 |
+
+On test the candidates were equally close (ToS DeBERTa-v3 0.770 macro-F1 / 0.853 any-risk recall
+against 0.770 / 0.872; privacy 0.773 against 0.769; contract 0.622 / 0.679 against 0.625 / 0.664),
+so the choice made on validation costs nothing measurable.
+
+What this shows:
+
+- **Oversampling did not help any transformer** either (as for TF-IDF above); rare labels are
+  probably already covered by the class-weighted loss.
+- **DeBERTa-v3 is not better on legal text than domain-pretrained BERTs** here: level on ToS and
+  privacy, clearly worse on contracts (0.668 vs 0.701).
+- **Contract recall is limited by the data, not by training.** Twice the unlabelled sentences,
+  oversampling and a different encoder all end at 0.66-0.68 test any-risk recall at precision
+  >= 0.70. The remaining errors are the annotation issues described above (unannotated
+  repetitions of real clauses, labels inherited from long spans), so the 0.85 target would need
+  re-annotation or document-level aggregation, not more GPU time.
+- **Joint model:** one LEGAL-BERT over all three datasets is close to the specialists on ToS and
+  contracts (test macro-F1 0.761 vs 0.770, 0.620 vs 0.625) and clearly worse on privacy (0.720
+  vs 0.769), likely because privacy is labelled per paragraph and sentences inherit labels that only some of
+  them express. The specialists stay served.
+
+Latency of the served models after this session, 5,000-word document on the Mac (median):
+ToS 4.9 s, contract 5.8 s (both screened), privacy 12.3 s.

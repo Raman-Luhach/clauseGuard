@@ -73,6 +73,10 @@ Each step prints a `=== hh:mm:ss` header. Expected durations on an H100:
 | Joint model | ~40 min |
 | **Total** | **about 4.5–5 h (≈ $12 at ~$2.50/h)** |
 
+Measured on 18 November 2026 on a **1x A100 (40 GB)**: 3 h 15 min in total (install to archive),
+of which training 1 h 40 min, final evaluation and packaging 1 h 05 min, joint model 8 min.
+Copying the 1.5 GB archive back took about 7 minutes.
+
 If the session stops (error, lost instance), run the same command again: finished training
 runs are recognised and skipped.
 
