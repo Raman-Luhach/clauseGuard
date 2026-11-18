@@ -25,7 +25,9 @@ cd "$(dirname "$0")/.."
 step() { echo; echo "=== $(date '+%H:%M:%S') $*"; }
 
 step "installing (Python 3.12, dependencies, CUDA PyTorch)"
-command -v uv >/dev/null || pip install -q uv
+export PATH="$HOME/.local/bin:$PATH"  # where pip --user and the uv installer put uv
+command -v uv >/dev/null || python3 -m pip install -q --user uv \
+  || curl -LsSf https://astral.sh/uv/install.sh | sh
 uv sync --frozen
 if ! uv run python -c "import sys, torch; sys.exit(0 if torch.cuda.is_available() else 1)"; then
   step "PyTorch from PyPI cannot use this GPU driver; installing the CUDA 12.6 build instead"
